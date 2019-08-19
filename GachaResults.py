@@ -9,6 +9,18 @@ valid_amounts_of_cash = set(4000, 8000, 20000, 40000)
 
 valid_amounts_of_food = set(150, 200, 250)
 
+class AllResult():
+    def __init__(self, result_set: set):
+        if not isinstance()
+
+class SingleResult():
+    def __init__(self, one_result: dict):
+        if not isinstance(one_result, dict):
+            raise TypeError('ガチャ結果画像から得たリザルトの型がdictではありません。')
+
+        self._screenshot_id = one_result["id"]
+        self._
+
 class FoodTypes(Enum):
     Cash = 'Cash'
     Exp = 'Exp'
