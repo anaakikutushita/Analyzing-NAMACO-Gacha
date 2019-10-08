@@ -137,6 +137,29 @@ class PathCollecter():
 ########################################################
 ##### Game System Definition
 ########################################################
+class CashAmount(Enum):
+    four_thousand = '4000'
+    eight_thousand = '8000'
+    twenty_thousand = '20000'
+    fourty_thousand = '40000'
+
+class Cash():
+    def __init__(self, amount=0):
+        if amount not in CashAmount:
+            raise ValueError("おカネ{amount}の値が不正")
+
+        self._amount = amount
+
+    def get_added(self, cash: Cash):
+        if not isinstance(cash, Cash):
+            raise TypeError("cashの型が不正")
+
+        new_cash = Cash(self._amount + cash._amount)
+        return new_cash
+
+    def count(self):
+        return self._amount
+
 class FoodTicketPiece():
     def __init__(self, pieces: int):
         if not self._available_pieces(pieces):
@@ -147,12 +170,61 @@ class FoodTicketPiece():
     def _available_pieces(self, pieces):
         return pieces in (0, 1)
 
-    def getƒ_added(self, ticket_piece):
+    def get_added(self, ticket_piece):
         if not isinstance(ticket_piece, FoodTicketPiece):
             raise TypeError('ticket_pieceの型がFoodTicketPieceでない')
 
         new_piece = FoodTicketPiece(self._pieces + ticket_piece._pieces)
         return new_piece
+
+    def count(self):
+        return self._pieces
+
+class FoodType(Enum):
+    EXP = 'exp'
+    CASH = 'cash'
+    NO_TYPES = 'no_types' # FoodTicketsの初期化用
+
+class FoodMultiplier(Enum):
+    """見本になる画像ファイルの名前に小数点を使えないっぽいので妥協"""
+    multi15 = '15'
+    multi20 = '20'
+    multi25 = '25'
+
+class FoodSuper():
+    """CashなのかExpなのかは本クラスでは判別しない"""
+    def __init__(self, amount):
+        if amount not in (0, 15, 20, 25):
+            raise ValueError("入手倍率：{amount}の値が不正")
+
+        self._amount = amount / 10 # 実際の1.5倍などの数字に合わせるために10で割る
+
+    #Foodをaddすることはないので、get_addedメソッドは実装しない
+
+class FoodExp(FoodSuper):
+    def __init__(self, amount):
+        super().__init__(amount)
+
+class FoodCash(FoodSuper):
+    def __init__(self, amount):
+        super().__init__(amount)
+
+class Abilities(Enum):
+    ink_saver_main     = 'ism'
+    ink_saver_sub      = 'iss'
+    ink_recovery_up    = 'iru'
+    run_speed_up       = 'rsu'
+    swim_speed_up      = 'ssu'
+    special_charge_up  = 'scu'
+    special_saver      = 'ss'
+    special_power_up   = 'spu'
+    quick_respawn      = 'qr'
+    quick_super_jump   = 'qsj'
+    sub_power_up       = 'bpu'
+    ink_resistance_up  = 'inkres'
+    bomb_defence_up_dx = 'bdx'
+    main_power_up      = 'mpu'
+    NO_ABILITIES       = 'no_abilities' # DrinkTicketPieceの初期化用
 
 class DrinkTicketPiece():
     """ドリンクチケットの枚数を表現する型。一回のガチャで手に入る枚数のみ表現可能"""
@@ -171,6 +243,9 @@ class DrinkTicketPiece():
 
         new_piece = DrinkTicketPiece(self._pieces + ticket_piece._pieces)
         return new_piece
+
+    def count(self):
+        return self._pieces
 
 class ChunkPiece(Enum):
     zero = '0'
@@ -196,74 +271,8 @@ class Chunk():
         new_piece = Chunk(self._pieces + chunk._pieces)
         return new_piece
 
-class CashAmount(Enum):
-    four_thousand = '4000'
-    eight_thousand = '8000'
-    twenty_thousand = '20000'
-    fourty_thousand = '40000'
-
-class Cash():
-    def __init__(self, amount=0):
-        if amount not in CashAmount:
-            raise ValueError("おカネ{amount}の値が不正")
-
-        self._amount = amount
-
-    def get_added(self, cash: Cash):
-        if not isinstance(cash, Cash):
-            raise TypeError("cashの型が不正")
-
-        new_cash = Cash(self._amount + cash._amount)
-        return new_cash
-
     def count(self):
-        return self._amount
-
-class FoodSuper():
-    """CashなのかExpなのかは本クラスでは判別しない"""
-    def __init__(self, amount):
-        if amount not in (0, 15, 20, 25):
-            raise ValueError("入手倍率：{amount}の値が不正")
-
-        self._amount = amount / 10 # 実際の1.5倍などの数字に合わせるために10で割る
-
-    #Foodをaddすることはないので、get_addedメソッドは実装しない
-
-class FoodExp(FoodSuper):
-    def __init__(self, amount):
-        super().__init__(amount)
-
-class FoodCash(FoodSuper):
-    def __init__(self, amount):
-        super().__init__(amount)
-
-class FoodType(Enum):
-    EXP = 'exp'
-    CASH = 'cash'
-    NO_TYPES = 'no_types' # FoodTicketsの初期化用
-
-class FoodMultiplier(Enum):
-    """見本になる画像ファイルの名前に小数点を使えないっぽいので妥協"""
-    multi15 = '15'
-    multi20 = '20'
-    multi25 = '25'
-
-class Abilities(Enum):
-    ink_saver_main     = 'ism'
-    ink_saver_sub      = 'iss'
-    ink_recovery_up    = 'iru'
-    run_speed_up       = 'rsu'
-    swim_speed_up      = 'ssu'
-    special_charge_up  = 'scu'
-    special_saver      = 'ss'
-    special_power_up   = 'spu'
-    quick_respawn      = 'qr'
-    quick_super_jump   = 'qsj'
-    sub_power_up       = 'bpu'
-    ink_resistance_up  = 'inkres'
-    bomb_defence_up_dx = 'bdx'
-    main_power_up      = 'mpu'
-    NO_ABILITIES       = 'no_abilities' # DrinkTicketPieceの初期化用
+        return self._pieces
 
 ########################################################
 ##### Result Holder
@@ -294,9 +303,6 @@ class FoodTickets():
         for ticket_type in add_target._tickets.keys:
             self._tickets[ticket_type] = self._tickets[ticket_type].get_add(add_target._tickets[ticket_type])
 
-    def count(self):
-        pass
-
 class DrinkTickets():
     """どの種類のドリンクチケットが何枚獲得できたかを表現するクラス"""
     # ドリンクチケットの各種を扱うコレクションクラスを作ったほうが懸命か
@@ -308,7 +314,6 @@ class DrinkTickets():
         if not isinstance(pieces, DrinkTicketPiece):
             raise TypeError('quantityの型が不正')
 
-        # 最初に全種類ゼロで定義してから、指定された種類だけ数を入れる
         # self._tickets = dict(
         #     ism     = DrinkTicketPiece(0)
         #     ,iss    = DrinkTicketPiece(0)
@@ -326,6 +331,7 @@ class DrinkTickets():
         #     ,mpu    = DrinkTicketPiece(0))
         self._tickets = dict()
         for ability in Abilities:
+            # 最初に全種類ゼロで定義してから、指定された種類だけ数を入れる
             self._tickets[ability] = DrinkTicketPiece(0)
 
         self._tickets[ability] = self._tickets[ability].get_added(pieces)
@@ -401,13 +407,28 @@ class ResultCollector():
 
     def output_csv(self):
         """csv形式にしてファイルに出力する"""
+        writer = CsvWriter(self._results)
+        writer.write('output.csv')
+
+
         with open('gacha_results.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
             # spamwriter.writerow(['Spam'] * 5 + ['Baked Beans'])
+
+            # csv.DictWriterメソッドを使ってCSVに書き出すのが良さそう。
+            # fieldnames = ['first_name', 'last_name']のように指定したあと、
+            # writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
+            # と辞書形式で書き込むと、ヘッダーの位置に合わせてデータを書き込んでくれるっぽい。
+            # なので、必要になるのは①SingleResultからヘッダーを作る処理
+            # ②SingleResultから辞書形式で各数量を取り出す処理
+            # 以上の2つ
         for single_result in self._results:
             pass
 
+########################################################
+##### Result Writer
+########################################################
 class CsvWriter():
     def __init__(self, results_set):
         if not isinstance(results_set, set):
@@ -420,28 +441,60 @@ class CsvWriter():
         self._results_set = results_set
 
     def write(self, file_name):
+        # チュートリアルのコピペ
+        # with open('names.csv', 'w', newline='') as csvfile:
+        #     fieldnames = ['first_name', 'last_name']
+        #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        #     writer.writeheader()
+        #     writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
+        #     writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
+        #     writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
         with open(file_name, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',',
-                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(self._get_csv_head())
+            fieldnames = self._get_csv_head()
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
 
             for single_result in self._results_set:
-                writer.writerow(self._get_csv_row(single_result))
+                csv_row = self._get_csv_row(single_result)
+                writer.writerow(csv_row)
 
     def _get_csv_head(self):
-        single_result = SingleResult(uuid4())
-        header = None
-        for member, value in single_result.__dict__.items():
-            for value_member in value.__dict__.keys():
-                # writer.writerow(['Spam'] * 5 + ['Baked Beans'])
-                header += [member + value_member]
+        """SingleResult型のメンバー名などを使ってCSVファイルのヘッダを作る"""
+        # メンバー名が必要なだけなので、インスタンスそのものは必要ない
+        dummy_result = SingleResult(uuid4())
+        header = list()
+        for member, value in dummy_result.__dict__.items():
+            if member == dummy_result.__dict__.keys()[0]: # uuidの場合
+                # 最初のmember(uuid)だけはvalue_memberを持っていないので、memberだけを追加する
+                header.append(member[1:])
+            else:
+                for value_member, value_value in value.__dict__.items():
+                    # value_memberの値をdict型で持っているFoodTicketsなどは、そのdictのkeyを取り出す
+                    if isinstance(value_value, dict):
+                        for dict_key in value_value.keys():
+                            header.append(member[1:] + '_' + dict_key)
+                    else: # Cashの場合
+                        # memberの0文字目はアンダースコアなので取り除く。
+                        # value_memberの0文字目もアンダースコアだが、こちらは入れると読みやすくなるので取り除かない。
+                        header.append(member[1:] + value_member)
 
         return header
 
     def _get_csv_row(self, single_result):
-        row = None
-        for value in single_result.__dict__.values():
-            row += 
+        # DrinkTickets._tickets[Abilities.ISM]などの各フィールド名と、それが保持している数量を対応させた辞書を作る
+        row = dict()
+        for member, value in single_result.__dict__.items():
+            if member == single_result.__dict__.keys()[0]: # uuidの場合
+                row[member[1:]] = value
+            else:
+                for value_member, value_value in value.__dict__.items():
+                    if isinstance(value_value, dict): # FoodTicketsなどの場合
+                        for dict_key in value_value.keys():
+                            row[member[1:] + '_' + dict_key] = value_member[dict_key].count()
+                    else: # Cashの場合
+                        row[member[1:] + value_member] = value.count()
+
+        return row
 
 ########################################################
 ##### Gacha Analyzer
