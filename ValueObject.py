@@ -248,11 +248,11 @@ class DrinkTicketPiece():
         return self._pieces
 
 class ChunkPiece(Enum):
-    zero = '0'
-    one = '1'
+    zero  = '0'
+    one   = '1'
     three = '3'
-    five = '5'
-    ten = '10'
+    five  = '5'
+    ten   = '10'
 
 class Chunk():
     def __init__(self, pieces: int):
@@ -279,19 +279,27 @@ class Chunk():
 ########################################################
 class FoodTickets():
     """おカネフードと経験値フードの両方を保持する"""
-    def __init__(self, food_type=FoodType.NO_TYPES, pieces=FoodTicketPiece(0)):
-        if not isinstance(food_type, FoodType):
-            raise TypeError('exp_foodの型が不正')
+    def __init__(self,
+                 food_type=FoodType.NO_TYPES,
+                 multiplier=FoodMultiplier.multi15,
+                 pieces=FoodTicketPiece(0)):
+        if food_type not in FoodType:
+            raise TypeError('food_typeの値が不正')
+
+        if multiplier not in FoodMultiplier:
+            raise TypeError('multiplierの値が不正')
 
         if not isinstance(pieces, FoodTicketPiece):
             raise TypeError('cash_foodの型が不正')
 
         self._tickets = dict()
-        for food_type in FoodType:
-            for multiplier in FoodMultiplier:
-                self._tickets[food_type + multiplier] = FoodTicketPiece(0)
+        # (おカネ・経験値で2種)×(倍率3種)=6項目をkeyとする辞書で保持する
+        for ftype in FoodType:
+            for multi in FoodMultiplier:
+                self._tickets[ftype + multi] = FoodTicketPiece(0)
 
-        self._tickets[food_type] = self._tickets[food_type].get_added(pieces)
+        target_key = food_type + multiplier
+        self._tickets[target_key] = self._tickets[target_key].get_added(pieces)
 
         # NO_TYPESは削除しておく
         del self._tickets[FoodType.NO_TYPES]
@@ -301,7 +309,8 @@ class FoodTickets():
             raise TypeError('add_targetの型が不正')
 
         for ticket_type in add_target._tickets.keys:
-            self._tickets[ticket_type] = self._tickets[ticket_type].get_add(add_target._tickets[ticket_type])
+            added_tickets = self._tickets[ticket_type].get_added(add_target._tickets[ticket_type])
+            self._tickets[ticket_type] = added_tickets
 
 class DrinkTickets():
     """どの種類のドリンクチケットが何枚獲得できたかを表現するクラス"""
@@ -497,7 +506,7 @@ class GachaAnalyzer(AnalyzerSuper):
     def get_result(self):
         """画像に何が写っているかに関係なく、おカネ・フード・ドリンク・かけらの解析を順番に行う。"""
         gacha_result = SingleResult(uuid4())
-        
+
         cash_result = DetecterCash(self._screenshot).get_cash()
         gacha_result.gain_cash(cash_result)
 
@@ -573,24 +582,25 @@ class DetecterFood(AnalyzerSuper):
         self._food_crop = self._screenshot.crop(food_region)
 
     def get_foods(self):
-        both_foods = FoodTickets()
-        both_foods.exp_food = self._get_exp()
-        both_foods.cash_food = self._get_cash()
-        return both_foods
+        food_tickets = FoodTickets()
+        food_tickets.gain(self._get_exp())
+        food_tickets.gain(self._get_cash())
+        return food_tickets
 
     def _get_exp(self):
         for multiplier in FoodMultiplier:
             if self._has(FoodType.EXP, multiplier):
-                return FoodExp(multiplier)
+                return FoodTickets(FoodType.EXP, multiplier, FoodTicketPiece(1))
 
-        return FoodExp(0)
+        # ガチャ結果に写っているのが経験値チケットじゃなかったら、ゼロ枚で返す
+        return FoodTickets()
 
     def _get_cash(self):
         for multiplier in FoodMultiplier:
             if self._has(FoodType.CASH, multiplier):
-                return FoodCash(multiplier)
+                return FoodTickets(FoodType.CASH, multiplier, FoodTicketPiece(1))
 
-        return FoodCash(0)
+        return FoodTickets()
 
     def _has(self, food_type, multiplier):
         if not isinstance(food_type, FoodType):
