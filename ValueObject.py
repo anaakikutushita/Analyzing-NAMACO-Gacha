@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from uuid import uuid4
+from uuid import UUID
 from enum import Enum
 from pathlib import Path
 import csv
@@ -23,6 +24,12 @@ class HorizontalAxisCoordinate():
             raise ValueError("{value}が範囲外")
         self._value = value
 
+    def __ge__(self, other):
+        return self._value >= other._value
+
+    def __sub__(self, other):
+        return self._value - other._value
+
 class VerticalAxisCoordinate():
     def __init__(self, value):
         max_val = ScreenshotScale().height
@@ -30,6 +37,12 @@ class VerticalAxisCoordinate():
         if not is_within_range(value, minimum_val, max_val):
             raise ValueError("{value}が範囲外")
         self._value = value
+
+    def __ge__(self, other):
+        return self._value >= other._value
+
+    def __sub__(self, other):
+        return self._value - other._value
 
 def is_within_range(value, minimum_val, max_val):
     return minimum_val <= value <= max_val
@@ -55,7 +68,8 @@ class Screenshot():
         if not isinstance(image, np.ndarray):
             raise TypeError("ndarrayでない")
 
-        self._height, self._width = image.shape
+        self._height = image.shape[0]
+        self._width = image.shape[1]
         if self._height > ScreenshotScale().height:
             raise ValueError("画像の縦：{height}が規定より大きい")
         if self._width > ScreenshotScale().width:
@@ -68,14 +82,17 @@ class Screenshot():
             raise TypeError("クロップ指定領域がImageRegion型でない")
 
         crop_width = region.right - region.left
-        if self._width < crop_width:
+        if crop_width > self._width:
             raise ValueError("画像横幅：{self._width}よりも大きな横幅：{crop_width}でクロップしようとしている")
 
         crop_height = region.bottom - region.top
-        if self._height < crop_height:
+        if crop_height > self._height:
             raise ValueError("画像縦幅：{self._height}よりも大きな縦幅：{crop_height}でクロップしようとしている")
 
-        cropped_image = self._image[region.top:region.bottom, region.left:region.right]
+        # 本当はCoodinateクラスの._valueに触るべきではないが、うまいやり方が分からなかったのでこうした
+        cropped_image = self._image[
+            region.top._value:region.bottom._value,
+            region.left._value:region.right._value]
         return Screenshot(cropped_image)
 
 class ScreenshotCollecter():
@@ -87,6 +104,9 @@ class ScreenshotCollecter():
             raise TypeError('スクリーンショットの型が不正')
 
         self._screenshots.add(screenshot)
+
+    def count(self):
+        return len(self._screenshots)
 
     def get_result_collection(self):
         collector = ResultCollector()
@@ -113,7 +133,7 @@ class PathCollecter():
         if not isinstance(target_directory, Path):
             raise TypeError('ディレクトリ{target_directory}がPathでない')
 
-        if not isinstance(extension, Extension):
+        if extension not in Extension:
             raise TypeError('extension{Extension}の型がExtensionでない')
 
         if not target_directory.exists():
@@ -122,13 +142,13 @@ class PathCollecter():
         if not target_directory.is_dir():
             raise ValueError('ディレクトリ{target_directory}がファイルを指している')
 
-        self._path_collection = set(target_directory.glob(extension))
+        self._path_collection = set(target_directory.glob(extension.value))
 
     def get_screenshots(self):
         """ScreenshotCollecterを返す"""
         collecter = ScreenshotCollecter()
-        while self._path_collection:
-            image = cv2.imread(self._path_collection.pop())
+        for image_path in self._path_collection:
+            image = cv2.imread(str(image_path))
             screenshot = Screenshot(image)
             collecter.add(screenshot)
 
@@ -138,27 +158,33 @@ class PathCollecter():
 ##### Game System Definition
 ########################################################
 class CashAmount(Enum):
-    four_thousand = '4000'
-    eight_thousand = '8000'
-    twenty_thousand = '20000'
-    fourty_thousand = '40000'
+    four_thousand   = 4000
+    eight_thousand  = 8000
+    twenty_thousand = 20000
+    fourty_thousand = 40000
+    zero            = 0 # 初期化用
 
 class Cash():
-    def __init__(self, amount=0):
+    def __init__(self, amount=CashAmount.zero):
         if amount not in CashAmount:
             raise ValueError("おカネ{amount}の値が不正")
 
         self._amount = amount
 
-    def get_added(self, cash: Cash):
+    # 一度のガチャ結果でCashは1種類しか出てこないのが、ゼロで初期化したあとにaddが必要
+    def get_added(self, cash):
         if not isinstance(cash, Cash):
             raise TypeError("cashの型が不正")
 
-        new_cash = Cash(self._amount + cash._amount)
+        if self._amount != CashAmount.zero:
+            raise ValueError('Cashはzeroのときにだけgainできる')
+
+        # ゼロのときだけaddできるので、self._amount + cash._amountのような足し算をする必要はない
+        new_cash = Cash(cash._amount)
         return new_cash
 
     def count(self):
-        return self._amount
+        return self._amount.value
 
 class FoodTicketPiece():
     def __init__(self, pieces: int):
@@ -170,6 +196,7 @@ class FoodTicketPiece():
     def _available_pieces(self, pieces):
         return pieces in (0, 1)
 
+    # フードチケットは一度に1枚しか出ないが、ゼロで初期化したあとにaddメソッドが必要
     def get_added(self, ticket_piece):
         if not isinstance(ticket_piece, FoodTicketPiece):
             raise TypeError('ticket_pieceの型がFoodTicketPieceでない')
@@ -181,21 +208,22 @@ class FoodTicketPiece():
         return self._pieces
 
 class FoodType(Enum):
-    EXP = 'exp'
-    CASH = 'cash'
+    EXP      = 'exp'
+    CASH     = 'cash'
     NO_TYPES = 'no_types' # FoodTicketsの初期化用
 
 class FoodMultiplier(Enum):
     """見本になる画像ファイルの名前に小数点を使えないっぽいので妥協"""
-    multi15 = '15'
-    multi20 = '20'
-    multi25 = '25'
+    multi15 = 15
+    multi20 = 20
+    multi25 = 25
+    zero    = 0 # FoodSuperの初期化用
 
 class FoodSuper():
     """CashなのかExpなのかは本クラスでは判別しない"""
     def __init__(self, amount):
-        if amount not in (0, 15, 20, 25):
-            raise ValueError("入手倍率：{amount}の値が不正")
+        if amount not in FoodMultiplier:
+            raise TypeError("入手倍率：{amount}の値が不正")
 
         self._amount = amount / 10 # 実際の1.5倍などの数字に合わせるために10で割る
 
@@ -235,7 +263,8 @@ class DrinkTicketPiece():
         self._pieces = pieces
 
     def _available_pieces(self, pieces):
-        return pieces in (0, 1, 3)
+        # 一度の結果で1種3枚が同時に手に入ることは恐らくないが、低確率なだけかもしれないので許容しておく
+        return pieces in (0, 1, 2, 3)
 
     def get_added(self, ticket_piece):
         if not isinstance(ticket_piece, DrinkTicketPiece):
@@ -248,31 +277,33 @@ class DrinkTicketPiece():
         return self._pieces
 
 class ChunkPiece(Enum):
-    zero  = '0'
-    one   = '1'
-    three = '3'
-    five  = '5'
-    ten   = '10'
+    zero  = 0
+    one   = 1
+    three = 3
+    five  = 5
+    ten   = 10
 
 class Chunk():
-    def __init__(self, pieces: int):
-        if not self._available_pieces(pieces):
+    def __init__(self, pieces: ChunkPiece):
+        if pieces not in ChunkPiece:
             raise ValueError('ドリンクチケット枚数{pieces}が不正')
 
         self._pieces = pieces
 
-    def _available_pieces(self, pieces):
-        return str(pieces) in ChunkPiece
-
+    # 一度のガチャ結果ではchunkは一種しか出ないが、ゼロで初期化したあとにgainするので必要
     def get_added(self, chunk):
         if not isinstance(chunk, Chunk):
             raise TypeError('chunkの型がChunkでない')
 
-        new_piece = Chunk(self._pieces + chunk._pieces)
+        if not self._pieces == ChunkPiece.zero:
+            raise ValueError('Chunkはzeroの場合のみgain可能')
+
+        # zeroのときに限ってaddが可能なので、実際に足し算self._piece + chunk._pieceをする必要はない
+        new_piece = Chunk(chunk._pieces)
         return new_piece
 
     def count(self):
-        return self._pieces
+        return int(self._pieces.value)
 
 ########################################################
 ##### Result Holder
@@ -295,20 +326,25 @@ class FoodTickets():
         self._tickets = dict()
         # (おカネ・経験値で2種)×(倍率3種)=6項目をkeyとする辞書で保持する
         for ftype in FoodType:
+            if ftype == FoodType.NO_TYPES:
+                # NO_TYPESは必要ないので飛ばす
+                continue
+
             for multi in FoodMultiplier:
-                self._tickets[ftype + multi] = FoodTicketPiece(0)
+                self._tickets[str(ftype.value) + str(multi.value / 10)] = FoodTicketPiece(0)
 
-        target_key = food_type + multiplier
-        self._tickets[target_key] = self._tickets[target_key].get_added(pieces)
+        if ftype != FoodType.NO_TYPES:
+            target_key = str(food_type.value) + str(multiplier.value / 10)
+            self._tickets[target_key] = self._tickets[target_key].get_added(pieces)
 
-        # NO_TYPESは削除しておく
-        del self._tickets[FoodType.NO_TYPES]
-
-    def gain(self, add_target: FoodTickets):
-        if not isinstance(add_target, FoodTickets):
+    # ガチャ一回の結果でフードチケットは1種1枚しか出ないが、ゼロで初期化したあとにgainするので必要
+    def gain(self, add_target):
+        if isinstance(add_target, FoodTickets):
             raise TypeError('add_targetの型が不正')
 
-        for ticket_type in add_target._tickets.keys:
+        # gainできるのはゼロのときだけという縛りを入れようと思ったけど力尽きた
+
+        for ticket_type in add_target._tickets.keys():
             added_tickets = self._tickets[ticket_type].get_added(add_target._tickets[ticket_type])
             self._tickets[ticket_type] = added_tickets
 
@@ -339,9 +375,9 @@ class DrinkTickets():
         #     ,bdx    = DrinkTicketPiece(0)
         #     ,mpu    = DrinkTicketPiece(0))
         self._tickets = dict()
-        for ability in Abilities:
+        for abl in Abilities:
             # 最初に全種類ゼロで定義してから、指定された種類だけ数を入れる
-            self._tickets[ability] = DrinkTicketPiece(0)
+            self._tickets[abl] = DrinkTicketPiece(0)
 
         self._tickets[ability] = self._tickets[ability].get_added(pieces)
 
@@ -352,7 +388,7 @@ class DrinkTickets():
         if not isinstance(add_target, DrinkTickets):
             raise TypeError('add_target:{add_target}の型が不正')
 
-        for power in add_target._tickets.keys:
+        for power in add_target._tickets.keys():
             self._tickets[power] = self._tickets[power].get_added(add_target._tickets[power])
 
     def gain_all(self):
@@ -363,28 +399,37 @@ class DrinkTickets():
 
 class Chunks():
     """どの種類のギアパワーのかけらをいくつ取得できたかを表現するクラス"""
-    def __init__(self, ability=Abilities.NO_ABILITIES, pieces=Chunk(0)):
+    def __init__(self,
+                 ability=Abilities.NO_ABILITIES,
+                 pieces=Chunk(ChunkPiece.zero)):
+        if ability not in Abilities:
+            raise ValueError('abilityの値が不正')
+
+        if not isinstance(pieces, Chunk):
+            raise TypeError('piecesの型が不正')
+
         self._chunks = dict()
-        for ability in Abilities:
-            self._chunks[ability] = Chunk(0)
+        for abl in Abilities:
+            self._chunks[abl] = Chunk(ChunkPiece.zero)
 
         self._chunks[ability] = self._chunks[ability].get_added(pieces)
 
         # NO_ABILITIESは削除しておく
         del self._chunks[Abilities.NO_ABILITIES]
 
+    # 一度のガチャ結果ではかけらは1種しか手に入らないが、ゼロで初期化したあとにgainするので必要
     def gain(self, add_target):
-        if not isinstance(add_target, Chunk):
+        if not isinstance(add_target, Chunks):
             raise TypeError('add_target：{add_target}の型が不正')
 
-        for power in add_target._chunks.keys:
+        for power in add_target._chunks.keys():
             self._chunks[power] = self._chunks[power].get_added(add_target._chunks[power])
 
 class SingleResult():
     """単発のガチャ結果を保持する"""
     def __init__(self, result_id):
-        if not isinstance(result_id, uuid4):
-            raise TypeError('result_idの型がuuid4でない')
+        if not isinstance(result_id, UUID):
+            raise TypeError('result_idの型がUUIDでない')
 
         self._result_id = result_id
         self._cash   = Cash()
@@ -393,7 +438,7 @@ class SingleResult():
         self._chunks = Chunks()
 
     def gain_cash(self, cash: Cash):
-        self._cash.get_added(cash)
+        self._cash = self._cash.get_added(cash)
 
     def gain_food(self, food_tickets: FoodTickets):
         self._foods.gain(food_tickets)
