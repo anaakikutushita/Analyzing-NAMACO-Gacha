@@ -282,7 +282,7 @@ class FoodTickets():
     def __init__(self, food_type=FoodType.NO_TYPES, pieces=FoodTicketPiece(0)):
         if not isinstance(food_type, FoodType):
             raise TypeError('exp_foodの型が不正')
-            
+
         if not isinstance(pieces, FoodTicketPiece):
             raise TypeError('cash_foodの型が不正')
 
@@ -409,22 +409,6 @@ class ResultCollector():
         """csv形式にしてファイルに出力する"""
         writer = CsvWriter(self._results)
         writer.write('output.csv')
-
-
-        with open('gacha_results.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',',
-                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            # spamwriter.writerow(['Spam'] * 5 + ['Baked Beans'])
-
-            # csv.DictWriterメソッドを使ってCSVに書き出すのが良さそう。
-            # fieldnames = ['first_name', 'last_name']のように指定したあと、
-            # writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
-            # と辞書形式で書き込むと、ヘッダーの位置に合わせてデータを書き込んでくれるっぽい。
-            # なので、必要になるのは①SingleResultからヘッダーを作る処理
-            # ②SingleResultから辞書形式で各数量を取り出す処理
-            # 以上の2つ
-        for single_result in self._results:
-            pass
 
 ########################################################
 ##### Result Writer
