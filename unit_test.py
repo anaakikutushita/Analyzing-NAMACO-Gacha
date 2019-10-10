@@ -232,7 +232,7 @@ class TestDrinkTickets(unittest.TestCase):
     def test_invalid_ability(self):
         try:
             ValueObject.DrinkTickets(
-                'dummy',
+'dummy',
                 ValueObject.DrinkTicketPiece(0))
         except:
             self.assertRaises(ValueError)
@@ -358,3 +358,381 @@ class TestSingleResult(unittest.TestCase):
 
         single_result.gain_cash(cash)
         self.assertEqual(single_result._cash.count(), 4000)
+
+    def test_gain_food(self):
+        ftype = ValueObject.FoodType.CASH
+        multi = ValueObject.FoodMultiplier.multi15
+
+        tickets = ValueObject.FoodTickets(
+            ftype,
+            multi,
+            ValueObject.FoodTicketPiece(1)
+        )
+
+        single_result = ValueObject.SingleResult(uuid4())
+        single_result.gain_food(tickets)
+
+        key = str(ftype.value) + str(multi.value / 10)
+        self.assertEqual(single_result._foods._tickets[key].count(), 1)
+
+    def test_gain_drink(self):
+        # 1種1枚gain出来るか調べる
+        ability1 = ValueObject.Abilities.ink_saver_main
+        tickets1 = ValueObject.DrinkTickets(
+            ability1,
+            ValueObject.DrinkTicketPiece(1)
+        )
+
+        single_result = ValueObject.SingleResult(uuid4())
+        single_result.gain_drink(tickets1)
+
+        self.assertEqual(single_result._drinks._tickets[ability1].count(), 1)
+
+        # 2種1枚ずつgain出来るか調べる
+        ability2 = ValueObject.Abilities.ink_saver_sub
+        tickets2 = ValueObject.DrinkTickets(
+            ability2,
+            ValueObject.DrinkTicketPiece(1)
+        )
+
+        single_result.gain_drink(tickets2)
+
+        self.assertEqual(single_result._drinks._tickets[ability1].count(), 1)
+        self.assertEqual(single_result._drinks._tickets[ability2].count(), 1)
+
+        # 1種2枚、もう1種1枚gain出来るか調べる
+        tickets3 = ValueObject.DrinkTickets(
+            ability1,
+            ValueObject.DrinkTicketPiece(1)
+        )
+
+        single_result.gain_drink(tickets3)
+
+        self.assertEqual(single_result._drinks._tickets[ability1].count(), 2)
+        self.assertEqual(single_result._drinks._tickets[ability2].count(), 1)
+
+    def test_gain_chunk(self):
+        ability1 = ValueObject.Abilities.ink_saver_main
+        chunk = ValueObject.Chunks(
+            ability1,
+            ValueObject.Chunk(ValueObject.ChunkPiece.five)
+        )
+
+        single_result = ValueObject.SingleResult(uuid4())
+        single_result.gain_chunk(chunk)
+
+        self.assertEqual(single_result._chunks._chunks[ability1].count(), 5)
+
+class TestResultCollector(unittest.TestCase):
+    def test_invalid_add(self):
+        collecter = ValueObject.ResultCollector()
+        try:
+            collecter.add('dummy')
+        except:
+            self.assertRaises(TypeError)
+
+    def test_add(self):
+        collecter = ValueObject.ResultCollector()
+
+        # おカネをゲットした場合を想定
+        single_result = ValueObject.SingleResult(uuid4())
+        cash_amount = ValueObject.CashAmount.four_thousand
+        cash = ValueObject.Cash(cash_amount)
+        single_result.gain_cash(cash)
+
+        collecter.add(single_result)
+
+        # collecterの中におカネが入っていることを確認する
+        popped_result = collecter._results.pop()
+        popped_cash = popped_result._cash
+        popped_amount = popped_cash.count()
+
+        self.assertEqual(popped_amount, cash_amount.value)
+
+    # def test_output_csv(self): あとでテストする
+        # collecter = ValueObject.ResultCollector()
+
+        # # ガチャ1回でおカネを4000Gゲット
+        # single_result1 = ValueObject.SingleResult(uuid4())
+        # cash_amount = ValueObject.CashAmount.four_thousand
+        # cash = ValueObject.Cash(cash_amount)
+        # single_result1.gain_cash(cash)
+        # collecter.add(single_result1)
+
+        # # もう1回のガチャでメ性のかけらを10個ゲット
+        # single_result2 = ValueObject.SingleResult(uuid4())
+        # ability = ValueObject.Abilities.main_power_up
+        # piece = ValueObject.ChunkPiece.ten
+        # chunk = ValueObject.Chunks(ability, piece)
+        # single_result2.gain_chunk(chunk)
+        # collecter.add(single_result2)
+
+        # writer = ValueObject.CsvWriter(collecter._results)
+
+        # # 期待されるリザルト行を手打ちする
+
+class TestCsvWriter(unittest.TestCase):
+    def test_invalid_result(self):
+        try:
+            ValueObject.CsvWriter('dummy')
+        except:
+            self.assertRaises(TypeError)
+
+    # def test_write(self): あとでテストする
+
+    def test_get_csv_head(self):
+        # テストを書いた時点における想定ヘッダを手打ちして比較する
+        expected_header = list()
+        expected_header.append('result_id')
+
+        expected_header.append('cash' + '_amount')
+
+        expected_header.append('foods' + '_' + 'exp1.5')
+        expected_header.append('foods' + '_' + 'exp2.0')
+        expected_header.append('foods' + '_' + 'exp2.5')
+        expected_header.append('foods' + '_' + 'cash1.5')
+        expected_header.append('foods' + '_' + 'cash2.0')
+        expected_header.append('foods' + '_' + 'cash2.5')
+
+        expected_header.append('drinks' + '_' + 'ink_saver_main')
+        expected_header.append('drinks' + '_' + 'ink_saver_sub')
+        expected_header.append('drinks' + '_' + 'ink_recovery_up')
+        expected_header.append('drinks' + '_' + 'run_speed_up')
+        expected_header.append('drinks' + '_' + 'swim_speed_up')
+        expected_header.append('drinks' + '_' + 'special_charge_up')
+        expected_header.append('drinks' + '_' + 'special_saver')
+        expected_header.append('drinks' + '_' + 'special_power_up')
+        expected_header.append('drinks' + '_' + 'quick_respawn')
+        expected_header.append('drinks' + '_' + 'quick_super_jump')
+        expected_header.append('drinks' + '_' + 'sub_power_up')
+        expected_header.append('drinks' + '_' + 'ink_resistance_up')
+        expected_header.append('drinks' + '_' + 'bomb_defence_up_dx')
+        expected_header.append('drinks' + '_' + 'main_power_up')
+
+        expected_header.append('chunks' + '_' + 'ink_saver_main')
+        expected_header.append('chunks' + '_' + 'ink_saver_sub')
+        expected_header.append('chunks' + '_' + 'ink_recovery_up')
+        expected_header.append('chunks' + '_' + 'run_speed_up')
+        expected_header.append('chunks' + '_' + 'swim_speed_up')
+        expected_header.append('chunks' + '_' + 'special_charge_up')
+        expected_header.append('chunks' + '_' + 'special_saver')
+        expected_header.append('chunks' + '_' + 'special_power_up')
+        expected_header.append('chunks' + '_' + 'quick_respawn')
+        expected_header.append('chunks' + '_' + 'quick_super_jump')
+        expected_header.append('chunks' + '_' + 'sub_power_up')
+        expected_header.append('chunks' + '_' + 'ink_resistance_up')
+        expected_header.append('chunks' + '_' + 'bomb_defence_up_dx')
+        expected_header.append('chunks' + '_' + 'main_power_up')
+
+        # ソートすることで比較を容易にする
+        expected_header.sort()
+
+        dummy_result = ValueObject.SingleResult(uuid4())
+        results_set = set()
+        results_set.add(dummy_result)
+        writer = ValueObject.CsvWriter(results_set)
+
+        header = writer._get_csv_head()
+
+        self.assertEqual(header, expected_header)
+
+    def test_get_csv_row(self):
+        collecter = ValueObject.ResultCollector()
+
+        # ガチャ1回でおカネを4000Gゲット
+        result_id = uuid4()
+        single_result1 = ValueObject.SingleResult(result_id)
+        cash_amount = ValueObject.CashAmount.four_thousand
+        cash = ValueObject.Cash(cash_amount)
+        single_result1.gain_cash(cash)
+        collecter.add(single_result1)
+
+        writer = ValueObject.CsvWriter(collecter._results)
+
+        # 期待されるリザルト行を手打ちする
+        expected_row = dict()
+        expected_row['result_id'] = result_id
+
+        expected_row['cash' + '_amount'] = cash_amount.four_thousand.value
+
+        expected_row['foods' + '_' + 'exp1.5']  = ValueObject.FoodTicketPiece(0).count()
+        expected_row['foods' + '_' + 'exp2.0']  = ValueObject.FoodTicketPiece(0).count()
+        expected_row['foods' + '_' + 'exp2.5']  = ValueObject.FoodTicketPiece(0).count()
+        expected_row['foods' + '_' + 'cash1.5'] = ValueObject.FoodTicketPiece(0).count()
+        expected_row['foods' + '_' + 'cash2.0'] = ValueObject.FoodTicketPiece(0).count()
+        expected_row['foods' + '_' + 'cash2.5'] = ValueObject.FoodTicketPiece(0).count()
+
+        expected_row['drinks' + '_' + 'ink_saver_main']     = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'ink_saver_sub']      = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'ink_recovery_up']    = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'run_speed_up']       = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'swim_speed_up']      = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'special_charge_up']  = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'special_saver']      = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'special_power_up']   = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'quick_respawn']      = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'quick_super_jump']   = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'sub_power_up']       = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'ink_resistance_up']  = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'bomb_defence_up_dx'] = ValueObject.DrinkTicketPiece(0).count()
+        expected_row['drinks' + '_' + 'main_power_up']      = ValueObject.DrinkTicketPiece(0).count()
+
+        expected_row['chunks' + '_' + 'ink_saver_main']     = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'ink_saver_sub']      = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'ink_recovery_up']    = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'run_speed_up']       = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'swim_speed_up']      = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'special_charge_up']  = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'special_saver']      = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'special_power_up']   = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'quick_respawn']      = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'quick_super_jump']   = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'sub_power_up']       = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'ink_resistance_up']  = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'bomb_defence_up_dx'] = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+        expected_row['chunks' + '_' + 'main_power_up']      = ValueObject.Chunk(ValueObject.ChunkPiece.zero).count()
+
+        row = writer._get_csv_row(collecter._results.pop())
+
+        # keysが一致することを確認
+        keys_set = set(row.keys())
+        expected_keys_set = set(expected_row.keys())
+
+        self.assertFalse(keys_set.difference(expected_keys_set))
+
+class TestAnalyzerSuper(unittest.TestCase):
+    def test_invalid_screenshot(self):
+        try:
+            ValueObject.AnalyzerSuper('dummy')
+        except:
+            self.assertRaises(TypeError)
+
+class TestGachaAnalyzer(unittest.TestCase):
+    def test_cash_4000(self):
+        test_image = cv2.imread('unit_tests/test_images/cash_4000.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        got_value = single_result._cash.count()
+        self.assertEqual(got_value, 4000)
+
+    def test_cash_8000(self):
+        test_image = cv2.imread('unit_tests/test_images/cash_8000.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        got_value = single_result._cash.count()
+        self.assertEqual(got_value, 8000)
+
+    def test_cash_20000(self):
+        test_image = cv2.imread('unit_tests/test_images/cash_20000.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        got_value = single_result._cash.count()
+        self.assertEqual(got_value, 20000)
+
+    def test_chunk_1(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_1.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.bomb_defence_up_dx
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 1)
+
+    def test_chunk_3(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_3.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.sub_power_up
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 3)
+
+    def test_chunk_5(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_5.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 5)
+
+    def test_chunk_10(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_10.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.run_speed_up
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 10)
+
+    def test_chunk_bdx(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_bdx.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.bomb_defence_up_dx
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 1)
+
+    def test_chunk_bpu(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_bpu.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.sub_power_up
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 3)
+
+    def test_chunk_inkres(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_inkres.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.ink_resistance_up
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 1)
+
+    def test_chunk_iru(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_iru.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.ink_recovery_up
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 1)
+
+    def test_chunk_ism(self):
+        test_image = cv2.imread('unit_tests/test_images/chunk_ism.jpg')
+        screenshot = ValueObject.Screenshot(test_image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        abiliry = ValueObject.Abilities.ink_saver_main
+        got_value = single_result._chunks._chunks[abiliry].count()
+        self.assertEqual(got_value, 1)
