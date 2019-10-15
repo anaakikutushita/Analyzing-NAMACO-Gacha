@@ -595,8 +595,7 @@ class GachaAnalyzer(AnalyzerSuper):
         """画像に何が写っているかに関係なく、おカネ・フード・ドリンク・かけらの解析を順番に行う。"""
         gacha_result = SingleResult(uuid4())
 
-        detecter = DetecterCash(self._screenshot)
-        cash_result = detecter.get_cash()
+        cash_result = DetecterCash(self._screenshot).get_cash()
         gacha_result.gain_cash(cash_result)
 
         food_result = DetecterFood(self._screenshot).get_foods()
@@ -947,7 +946,8 @@ def get_similarity(cropped_image, model, threshold_difference):
 
     return is_same_image
 
-def is_similar(path_str, screenshot, threshold_difference=5):
+def is_similar(path_str, screenshot, threshold_difference=8):
+    # threshold_differenceの値は実際の画像でテストしつつ調整したもの。計算で出したい……
     model = Image.open(path_str)
     whole_image = screenshot._image
     is_similar = get_similarity(whole_image, model, threshold_difference)

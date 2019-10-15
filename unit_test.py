@@ -115,7 +115,55 @@ class TestScreenshotCollecter(unittest.TestCase):
 
         self.assertEqual(collecter.count(), 2)
 
-    # def test_get_result_collection(self): あとでテストを書く
+    def test_get_result_collection(self):
+        input_dir = Path('unit_tests/test_images/result_collecter_test')
+        input_paths = ValueObject.PathCollecter(input_dir)
+        input_screenshots = input_paths.get_screenshots()
+        gacha_results = input_screenshots.get_result_collection()
+
+        # gacha_resultsの中に以下の結果が入っていることを確認する
+        # cash4000 * 2
+        # ink_saver_sub chunk1 * 1
+        # food_cash1.5 * 1
+        results_set = gacha_results._results
+        cash4000_1 = False
+        cash4000_2 = False
+        iss_chunk1 = False
+        food_cash15 = False
+
+        for result in results_set:
+            if self._has_cash4000(result):
+                if not cash4000_1:
+                    cash4000_1 = True
+                else:
+                    cash4000_2 = True
+
+            if self._has_iss_chunk1(result):
+                iss_chunk1 = True
+
+            if self._has_food_cash15(result):
+                food_cash15 = True
+
+        test_resuts = [
+            cash4000_1,
+            cash4000_2,
+            iss_chunk1,
+            food_cash15
+        ]
+        self.assertTrue(all(test_resuts))
+
+    def _has_cash4000(self, result):
+        return result._cash.count() == 4000
+
+    def _has_iss_chunk1(self, result):
+        ability = ValueObject.Abilities.ink_saver_sub
+        return result._chunks._chunks[ability].count() == 1
+
+    def _has_food_cash15(self, result):
+        foodtype = ValueObject.FoodType.CASH
+        multiplier = ValueObject.FoodMultiplier.multi15
+        key = str(foodtype.value) + str(multiplier.value / 10)
+        return result._foods._tickets[key].count() == 1
 
 class TestPathCollecter(unittest.TestCase):
     def test_invalid_extention(self):
@@ -197,42 +245,11 @@ class TestFoodTickets(unittest.TestCase):
         except:
             self.assertRaises(TypeError)
 
-    # def test_invalid_gain(self):
-    #     tickets = ValueObject.FoodTickets(
-    #         ValueObject.FoodType.CASH,
-    #         ValueObject.FoodMultiplier.multi15,
-    #         ValueObject.FoodTicketPiece(1)
-    #     )
-
-    #     try:
-    #         tickets.gain(1)
-    #     except:
-    #         self.assertRaises(TypeError)
-
-    # def test_gain(self):
-    #     tickets = ValueObject.FoodTickets(
-    #         ValueObject.FoodType.CASH,
-    #         ValueObject.FoodMultiplier.multi15,
-    #         ValueObject.FoodTicketPiece(1)
-    #     )
-
-    #     add_target = ValueObject.FoodTickets(
-    #         ValueObject.FoodType.EXP,
-    #         ValueObject.FoodMultiplier.multi20,
-    #         ValueObject.FoodTicketPiece(1)
-    #     )
-
-    #     tickets.gain(add_target)
-
-    #     gained_key = ValueObject.FoodType.EXP.value + ValueObject.FoodMultiplier.multi20.value
-    #     gained_num = tickets._tickets[gained_key].count()
-    #     self.assertEqual(gained_num, 1)
-
 class TestDrinkTickets(unittest.TestCase):
     def test_invalid_ability(self):
         try:
             ValueObject.DrinkTickets(
-'dummy',
+                'dummy',
                 ValueObject.DrinkTicketPiece(0))
         except:
             self.assertRaises(ValueError)
