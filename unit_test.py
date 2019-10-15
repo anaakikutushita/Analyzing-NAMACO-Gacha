@@ -54,8 +54,8 @@ class TestScreenshot(unittest.TestCase):
             self.assertRaises(ValueError)
 
     def test_invalid_crop_type(self):
-        input_array = cv2.imread('./unit_tests/test_images/sample_image.jpg')
-        screenshot = ValueObject.Screenshot(input_array)
+        input_path = Path('unit_tests/test_images/sample_image.jpg')
+        screenshot = ValueObject.Screenshot(input_path)
         try:
             screenshot.crop(100)
         except:
@@ -63,8 +63,8 @@ class TestScreenshot(unittest.TestCase):
 
     def test_large_crop_width(self):
         # 画像を読み込んで小さなクロップを作ってから、その小さなクロップよりも大きなRegionでクロップしようとする
-        input_array = cv2.imread('./unit_tests/test_images/sample_image.jpg')
-        screenshot = ValueObject.Screenshot(input_array)
+        input_path = Path('unit_tests/test_images/sample_image.jpg')
+        screenshot = ValueObject.Screenshot(input_path)
         region = ValueObject.ImageRegion(
             ValueObject.HorizontalAxisCoordinate(0),
             ValueObject.HorizontalAxisCoordinate(100),
@@ -82,8 +82,8 @@ class TestScreenshot(unittest.TestCase):
             self.assertRaises(ValueError)
 
     def test_crop(self):
-        input_array = cv2.imread('./unit_tests/test_images/sample_image.jpg')
-        screenshot = ValueObject.Screenshot(input_array)
+        input_path = Path('unit_tests/test_images/sample_image.jpg')
+        screenshot = ValueObject.Screenshot(input_path)
         width = 200
         height = 300
         region = ValueObject.ImageRegion(
@@ -104,10 +104,10 @@ class TestScreenshotCollecter(unittest.TestCase):
             self.assertRaises(TypeError)
 
     def test_add(self):
-        input_array = cv2.imread('./unit_tests/test_images/sample_image.jpg')
+        input_path = Path('unit_tests/test_images/sample_image.jpg')
 
-        screenshot = ValueObject.Screenshot(input_array)
-        screenshot2 = ValueObject.Screenshot(input_array)
+        screenshot = ValueObject.Screenshot(input_path)
+        screenshot2 = ValueObject.Screenshot(input_path)
 
         collecter = ValueObject.ScreenshotCollecter()
         collecter.add(screenshot)
@@ -609,8 +609,8 @@ class TestAnalyzerSuper(unittest.TestCase):
 
 class TestGachaAnalyzer(unittest.TestCase):
     def test_cash_4000(self):
-        test_image = cv2.imread('unit_tests/test_images/cash_4000.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/cash_4000.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -619,8 +619,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 4000)
 
     def test_cash_8000(self):
-        test_image = cv2.imread('unit_tests/test_images/cash_8000.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/cash_8000.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -629,8 +629,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 8000)
 
     def test_cash_20000(self):
-        test_image = cv2.imread('unit_tests/test_images/cash_20000.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/cash_20000.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -638,9 +638,19 @@ class TestGachaAnalyzer(unittest.TestCase):
         got_value = single_result._cash.count()
         self.assertEqual(got_value, 20000)
 
+    def test_cash_40000(self):
+        path = Path('unit_tests/test_images/cash_40000.jpg')
+        screenshot = ValueObject.Screenshot(path)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        got_value = single_result._cash.count()
+        self.assertEqual(got_value, 40000)
+
     def test_chunk_1(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_1.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_1.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -650,8 +660,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 1)
 
     def test_chunk_3(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_3.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_3.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -661,8 +671,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 3)
 
     def test_chunk_5(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_5.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_5.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -672,8 +682,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 5)
 
     def test_chunk_10(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_10.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_10.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -683,8 +693,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 10)
 
     def test_chunk_bdx(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_bdx.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_bdx.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -694,8 +704,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 1)
 
     def test_chunk_bpu(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_bpu.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_bpu.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -705,8 +715,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 3)
 
     def test_chunk_inkres(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_inkres.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_inkres.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -716,8 +726,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 1)
 
     def test_chunk_iru(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_iru.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_iru.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 
@@ -727,8 +737,8 @@ class TestGachaAnalyzer(unittest.TestCase):
         self.assertEqual(got_value, 1)
 
     def test_chunk_ism(self):
-        test_image = cv2.imread('unit_tests/test_images/chunk_ism.jpg')
-        screenshot = ValueObject.Screenshot(test_image)
+        path = Path('unit_tests/test_images/chunk_ism.jpg')
+        screenshot = ValueObject.Screenshot(path)
         analyzer = ValueObject.GachaAnalyzer(screenshot)
         single_result = analyzer.get_result()
 

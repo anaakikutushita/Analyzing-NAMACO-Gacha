@@ -5,8 +5,14 @@ from uuid import UUID
 from enum import Enum
 from pathlib import Path
 import csv
+import math
+import operator
+from functools import reduce
 import cv2
 import numpy as np
+from PIL import ImageChops
+from PIL import Image
+from PIL import ImageFilter
 
 ########################################################
 ##### Screenshot Definition
@@ -64,18 +70,24 @@ class ImageRegion():
         self.bottom = bottom
 
 class Screenshot():
-    def __init__(self, image: np.ndarray):
-        if not isinstance(image, np.ndarray):
-            raise TypeError("ndarrayでない")
+    def __init__(self, image_path: Path):
+        if not isinstance(image_path, Path):
+            raise TypeError("Screenshot型に渡したものがPathでない")
 
-        self._height = image.shape[0]
-        self._width = image.shape[1]
+        if not image_path.is_file():
+            raise ValueError('パスがファイルではない')
+
+        if not image_path.exists():
+            raise FileNotFoundError('ファイルが存在しない')
+
+        self._set_attribute(self._get_image_object(image_path))
+
         if self._height > ScreenshotScale().height:
-            raise ValueError(f"画像の縦：{height}が規定より大きい")
+            raise ValueError(f"画像の縦：{self._image.size[0]}が規定より大きい")
         if self._width > ScreenshotScale().width:
-            raise ValueError(f"画像の横：{width}が規定より大きい")
+            raise ValueError(f"画像の横：{self._image.size[1]}が規定より大きい")
 
-        self._image = image
+        self._image_path = image_path
 
     def crop(self, region):
         if not isinstance(region, ImageRegion):
@@ -90,10 +102,24 @@ class Screenshot():
             raise ValueError(f"画像縦幅：{self._height}よりも大きな縦幅：{crop_height}でクロップしようとしている")
 
         # 本当はCoodinateクラスの._valueに触るべきではないが、うまいやり方が分からなかったのでこうした
-        cropped_image = self._image[
-            region.top._value:region.bottom._value,
-            region.left._value:region.right._value]
-        return Screenshot(cropped_image)
+        cropped_image = self._image.crop((
+            region.left._value, region.top._value,
+            region.right._value, region.bottom._value))
+
+        # 新しいオブジェクトを作って返す
+        new_screenshot = Screenshot(self._image_path)
+        new_screenshot._set_attribute(cropped_image)
+
+        return new_screenshot
+
+    def _set_attribute(self, image):
+        self._image = image
+
+        self._width = image.size[0]
+        self._height = image.size[1]
+
+    def _get_image_object(self, path: Path):
+        return Image.open(str(path))
 
 class ScreenshotCollecter():
     def __init__(self):
@@ -148,8 +174,7 @@ class PathCollecter():
         """ScreenshotCollecterを返す"""
         collecter = ScreenshotCollecter()
         for image_path in self._path_collection:
-            image = cv2.imread(str(image_path))
-            screenshot = Screenshot(image)
+            screenshot = Screenshot(image_path)
             collecter.add(screenshot)
 
         return collecter
@@ -570,7 +595,8 @@ class GachaAnalyzer(AnalyzerSuper):
         """画像に何が写っているかに関係なく、おカネ・フード・ドリンク・かけらの解析を順番に行う。"""
         gacha_result = SingleResult(uuid4())
 
-        cash_result = DetecterCash(self._screenshot).get_cash()
+        detecter = DetecterCash(self._screenshot)
+        cash_result = detecter.get_cash()
         gacha_result.gain_cash(cash_result)
 
         food_result = DetecterFood(self._screenshot).get_foods()
@@ -584,9 +610,12 @@ class GachaAnalyzer(AnalyzerSuper):
 
         return gacha_result
 
-class DetecterCash(AnalyzerSuper):
+class DetecterCash():
     def __init__(self, screenshot):
-        super().__init__(screenshot)
+        # super().__init__(screenshot)
+        if not isinstance(screenshot, Screenshot):
+            raise TypeError("Screenshot型ではない")
+        self._screenshot = screenshot
 
         # ↓金額特定に使う変数
         digits4_region = ImageRegion(HorizontalAxisCoordinate(520),
@@ -603,26 +632,28 @@ class DetecterCash(AnalyzerSuper):
 
     def get_cash(self):
         """おカネを入手していたらその金額を、入手していないスクショであれば0Gを返す"""
-        if self._has_any_cash():
+        if self._has_any_cash(self._screenshot):
             for target_amount in CashAmount:
+                if target_amount == CashAmount.zero:
+                    continue
+
                 if self._is(target_amount):
                     return Cash(target_amount)
 
         else:
             return Cash(CashAmount.zero)
 
-    def _has_any_cash(self):
+    def _has_any_cash(self, screenshot):
         """ガチャ結果のスクショがおカネを入手したものかどうか判定する"""
-        center_icon_path = 'model_images/cash_center.png'
-
         cash_icon_region = ImageRegion(HorizontalAxisCoordinate(597),
                                        HorizontalAxisCoordinate(678),
                                        VerticalAxisCoordinate(287),
                                        VerticalAxisCoordinate(370))
-        center_crop = self._screenshot.crop(cash_icon_region)
+        center_crop = screenshot.crop(cash_icon_region)
 
         # スクショの中央部分の切り抜きと、予め取得しているおカネアイコンの画像が似ていれば、
         # そのガチャ結果のスクショはおカネを手に入れているといえる
+        center_icon_path = 'model_images/cash_center.png'
         return is_similar(center_icon_path, center_crop)
 
     def _is(self, target_amount):
@@ -637,7 +668,7 @@ class DetecterCash(AnalyzerSuper):
             crop = self._digits4_crop
 
         model_path = f'model_images/cash_{str(target_amount.value)}.png'
-        return is_similar(model_path, crop, 0.98) # かなり高い値を閾値にしないと誤認識してしまう
+        return is_similar(model_path, crop, 10)
 
 class DetecterFood(AnalyzerSuper):
     def __init__(self, screenshot):
@@ -851,32 +882,112 @@ def get_hist(image):
     hist_vec = hist_array.reshape(hist_array.shape[0]*hist_array.shape[1], 1)
     return hist_vec
 
-def get_similarity(image1, image2):
-    if not (isinstance(image1, np.ndarray) and
-            isinstance(image2, np.ndarray)):
-        raise TypeError("画像比較時に渡すオブジェクトがndarrayではない")
+def get_similarity(cropped_image, model, threshold_difference):
+    ############################
+    # 二乗平均平方根を使う方法 #
+    ############################
+    # https://stackoverflow.com/questions/11816203/python-code-to-compare-images-in-python
+    grayed_cropped = cropped_image.convert('L')
+    grayed_model = model.convert('L')
 
-    if image1.shape != image2.shape:
-        return 0 # 画像の形状とチャンネル数が異なるなら、絶対に違う画像である
+    rad = 2
+    gaussed_cropped = grayed_cropped.filter(filter=ImageFilter.GaussianBlur(radius=rad))
+    gaussed_model = grayed_model.filter(filter=ImageFilter.GaussianBlur(radius=rad))
 
-    difference = cv2.subtract(image1, image2)
-    b, g, r = cv2.split(difference)
+    # gaussed_cropped.show()
+    # gaussed_model.show()
 
-    # b,g,rからちょっとだけ引き算した結果が0ならオッケー、って感じにするとよさげ
-    # 引き算のやり方は知らん
+    hist = ImageChops.difference(gaussed_cropped, gaussed_model).histogram()
+    difference = math.sqrt(reduce(operator.add,
+                                  map(lambda hist,
+                                      i: hist*(i**2),
+                                      hist,
+                                      range(256))) / (float(gaussed_model.size[0]) * gaussed_cropped.size[1]))
 
-    b_count = cv2.countNonZero(b)
-    g_count = cv2.countNonZero(g)
-    r_count = cv2.countNonZero(r)
+    is_same_image = difference < threshold_difference
 
-    return 1 # とりあえず
+    ##############################
+    # ハイパスフィルタを使う方法 #
+    ##############################
+    # image1_filtered = highpass_filter(image1)
+    # image2_filtered = highpass_filter(model)
 
+    # cv2.imshow('filtered1', image1_filtered)
+    # cv2.imshow('filtered2', image2_filtered)
+    # cv2.waitKey(0)
+
+    ########################
+    # 色の引き算を使う方法 #
+    ########################
+    # difference = cv2.subtract(image1_filtered, image2_filtered)
+
+    # # b,g,rからちょっとだけ引き算した結果が0ならオッケー、って感じにするとよさげ
+    # # 引き算のやり方は知らん
+
+    # zero_count = cv2.countNonZero(difference)
+    # is_same_image = difference.max() < threshold_difference
+
+    # if not is_same_image:
+    #     cv2.imshow('image1', image1_filtered)
+    #     cv2.imshow('image2', image2_filtered)
+    #     cv2.waitKey(30)
+
+    # cv2.imshow('image1', image1)
+    # cv2.imshow('image2', image2)
+
+    # cv2.waitKey(0)
+
+    ##############################
+    # ヒストグラム比較を使う方法 #
+    ##############################
     # hist1 = get_hist(image1)
     # hist2 = get_hist(image2)
     # compare_method = 0 #ようわからんけど0にしとくといいみたい
     # return cv2.compareHist(hist1, hist2, compare_method)
 
-def is_similar(path_str, screenshot, threshold_similarity=0.9):
-    model = cv2.imread(str(Path(path_str)))
-    similarity = get_similarity(screenshot._image, model)
-    return similarity > threshold_similarity
+    return is_same_image
+
+def is_similar(path_str, screenshot, threshold_difference=5):
+    model = Image.open(path_str)
+    whole_image = screenshot._image
+    is_similar = get_similarity(whole_image, model, threshold_difference)
+    return is_similar
+
+def highpass_filter(src, a = 0.1):
+    # グレースケール化
+    src = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
+
+    # 高速フーリエ変換(2次元)
+    src = np.fft.fft2(src)
+
+    # 画像サイズ
+    h, w = src.shape
+
+    # 画像の中心座標
+    cy, cx =  int(h/2), int(w/2)
+
+    # フィルタのサイズ(矩形の高さと幅)
+    rh, rw = int(a*cy), int(a*cx)
+
+    # 第1象限と第3象限、第1象限と第4象限を入れ替え
+    fsrc =  np.fft.fftshift(src)  
+
+    # 入力画像と同じサイズで値0の配列を生成
+    fdst = fsrc.copy()
+
+    # 中心部分だけ0を代入（中心部分以外は元のまま）
+    # fdst[cy-rh:cy+rh, cx-rw:cx+rw] = 0
+
+    # ローパスの場合：中心部分だけ1
+    mask = np.zeros((h, w), np.uint8)
+    mask[cy-rh:cy+rh, cx-rw:cx+rw] = 1
+    fdst = fdst * mask
+
+    # 第1象限と第3象限、第1象限と第4象限を入れ替え(元に戻す)
+    fdst =  np.fft.fftshift(fdst)
+
+    # 高速逆フーリエ変換
+    dst = np.fft.ifft2(fdst)
+
+    # 実部の値のみを取り出し、符号なし整数型に変換して返す
+    return  np.uint8(dst.real)
