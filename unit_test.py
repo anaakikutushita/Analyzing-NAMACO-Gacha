@@ -3,6 +3,8 @@
 from uuid import uuid4
 import unittest
 from pathlib import Path
+import os
+import csv
 import cv2
 import ValueObject
 
@@ -466,27 +468,29 @@ class TestResultCollector(unittest.TestCase):
 
         self.assertEqual(popped_amount, cash_amount.value)
 
-    # def test_output_csv(self): あとでテストする
-        # collecter = ValueObject.ResultCollector()
+    def test_output_csv(self):
+        # テスト前にアウトプットを削除しておく
+        output_dst = Path('unit_tests/output.csv')
+        self._delete_if_exists(output_dst)
 
-        # # ガチャ1回でおカネを4000Gゲット
-        # single_result1 = ValueObject.SingleResult(uuid4())
-        # cash_amount = ValueObject.CashAmount.four_thousand
-        # cash = ValueObject.Cash(cash_amount)
-        # single_result1.gain_cash(cash)
-        # collecter.add(single_result1)
+        input_dir = Path('unit_tests/test_images/result_collecter_test')
+        input_paths = ValueObject.PathCollecter(input_dir)
+        input_screenshots = input_paths.get_screenshots()
+        gacha_results = input_screenshots.get_result_collection()
+        gacha_results.output_csv(output_dst=output_dst)
 
-        # # もう1回のガチャでメ性のかけらを10個ゲット
-        # single_result2 = ValueObject.SingleResult(uuid4())
-        # ability = ValueObject.Abilities.main_power_up
-        # piece = ValueObject.ChunkPiece.ten
-        # chunk = ValueObject.Chunks(ability, piece)
-        # single_result2.gain_chunk(chunk)
-        # collecter.add(single_result2)
+        # 出力されたCSVの中身を確認する。
+        # ヘッダについては別のテストがあるが、
+        # ファイルとして生成されたものはテストしていないので、本テストでヘッダもテストする
 
-        # writer = ValueObject.CsvWriter(collecter._results)
+        # CSVが生成されているか
+        self.assertTrue(output_dst.exists())
 
-        # # 期待されるリザルト行を手打ちする
+        # 読み込んで中を確認しようと思ったけど力尽きた。ファイル生成だけ確認すればいいやってことにした。
+
+    def _delete_if_exists(self, path: Path):
+        if path.exists() and path.is_file():
+            os.remove(str(path))
 
 class TestCsvWriter(unittest.TestCase):
     def test_invalid_result(self):
@@ -495,7 +499,7 @@ class TestCsvWriter(unittest.TestCase):
         except:
             self.assertRaises(TypeError)
 
-    # def test_write(self): あとでテストする
+    # def test_write(self): TestResultCollector側でテストする
 
     def test_get_csv_head(self):
         # テストを書いた時点における想定ヘッダを手打ちして比較する

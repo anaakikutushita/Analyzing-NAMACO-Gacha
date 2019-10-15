@@ -487,10 +487,11 @@ class ResultCollector():
 
         self._results.add(result)
 
-    def output_csv(self):
+    def output_csv(self, output_dst='output.csv'):
         """csv形式にしてファイルに出力する"""
+        delete_if_exists(Path(output_dst))
         writer = CsvWriter(self._results)
-        writer.write('output.csv')
+        writer.write(output_dst)
 
 ########################################################
 ##### Result Writer
@@ -520,6 +521,7 @@ class CsvWriter():
             fieldnames = self._get_csv_head()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
 
+            writer.writeheader()
             for single_result in self._results_set:
                 csv_row = self._get_csv_row(single_result)
                 writer.writerow(csv_row)
@@ -991,3 +993,10 @@ def highpass_filter(src, a = 0.1):
 
     # 実部の値のみを取り出し、符号なし整数型に変換して返す
     return  np.uint8(dst.real)
+
+###########
+##### Other
+###########
+def delete_if_exists(self, path: Path):
+    if path.exists() and path.is_file():
+        os.remove(str(path))
