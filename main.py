@@ -7,11 +7,10 @@ import ValueObject
 def main():
     """entry point"""
     input_dir = Path('input_screenshots')
-    input_paths = ValueObject.PathCollecter(input_dir)
-    input_screenshots = input_paths.get_screenshots()
-    gacha_results = input_screenshots.get_result_collection()
+    input_paths = ValueObject.PathCollector(input_dir)
+    gacha_results = input_paths.analyze_each()
 
-    now = datetime.datetime.today().strftime('%Y-%m-%d_%H:%M:%S')
+    now = datetime.datetime.today().strftime('%Y-%m-%d_%H%M')
     file_name = 'result_' + now + '.csv'
     gacha_results.output_csv(output_dst=file_name)
 

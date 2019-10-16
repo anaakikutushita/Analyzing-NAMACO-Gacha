@@ -70,24 +70,19 @@ class ImageRegion():
         self.bottom = bottom
 
 class Screenshot():
-    def __init__(self, image_path: Path):
-        if not isinstance(image_path, Path):
-            raise TypeError("Screenshot型に渡したものがPathでない")
+    def __init__(self, image: Image):
+        # 型チェックしたかったけど、Imageオブジェクトの型を指定する方法がわからず断念
+        # if not isinstance(image, Image):
+        #     raise TypeError("Screenshot型に渡したものがImageでない")
 
-        if not image_path.is_file():
-            raise ValueError('パスがファイルではない')
-
-        if not image_path.exists():
-            raise FileNotFoundError('ファイルが存在しない')
-
-        self._set_attribute(self._get_image_object(image_path))
+        self._set_attribute(image)
 
         if self._height > ScreenshotScale().height:
             raise ValueError(f"画像の縦：{self._image.size[0]}が規定より大きい")
         if self._width > ScreenshotScale().width:
             raise ValueError(f"画像の横：{self._image.size[1]}が規定より大きい")
 
-        self._image_path = image_path
+        self._image = image
 
     def crop(self, region):
         if not isinstance(region, ImageRegion):
@@ -107,9 +102,7 @@ class Screenshot():
             region.right._value, region.bottom._value))
 
         # 新しいオブジェクトを作って返す
-        new_screenshot = Screenshot(self._image_path)
-        new_screenshot._set_attribute(cropped_image)
-
+        new_screenshot = Screenshot(cropped_image)
         return new_screenshot
 
     def _set_attribute(self, image):
@@ -118,10 +111,7 @@ class Screenshot():
         self._width = image.size[0]
         self._height = image.size[1]
 
-    def _get_image_object(self, path: Path):
-        return Image.open(str(path))
-
-class ScreenshotCollecter():
+class ScreenshotCollector():
     def __init__(self):
         self._screenshots = set()
 
@@ -153,7 +143,7 @@ class Extension(Enum):
     # PNG = 'png'
     # ALL = None #ALLは使わないほうが懸命かも（画像以外の拡張子を持つPathが混入するとめんどい）
 
-class PathCollecter():
+class PathCollector():
     """単一のディレクトリ内に存在するPathのコレクションを扱う"""
     def __init__(self, target_directory: Path, extension=Extension.JPG):
         if not isinstance(target_directory, Path):
@@ -171,13 +161,33 @@ class PathCollecter():
         self._path_collection = set(target_directory.glob(extension.value))
 
     def get_screenshots(self):
-        """ScreenshotCollecterを返す"""
-        collecter = ScreenshotCollecter()
+        """ScreenshotCollectorを返す"""
+        collector = ScreenshotCollector()
         for image_path in self._path_collection:
-            screenshot = Screenshot(image_path)
-            collecter.add(screenshot)
+            screenshot = Screenshot(Image.open(str(image_path)))
+            collector.add(screenshot)
 
-        return collecter
+        return collector
+
+    def analyze_each(self):
+        """
+        取得した画像のパスからリザルトを取得してまとめて返す
+        """
+        collector = ResultCollector()
+        all_screenshots = len(self._path_collection)
+        print(f'全部で{all_screenshots}枚の画像の解析を始めます。')
+        while self._path_collection:
+            # 一枚ずつopen → closeしないとファイルの開きすぎでエラーになる
+            path = self._path_collection.pop()
+            with Image.open(path) as image:
+                screenshot = Screenshot(image)
+                single_result = GachaAnalyzer(screenshot).get_result()
+                collector.add(single_result)
+
+            done_screenshots = all_screenshots - len(self._path_collection)
+            print(f'{int(done_screenshots / all_screenshots * 100)}%...')
+
+        return collector
 
 ########################################################
 ##### Game System Definition
@@ -489,7 +499,6 @@ class ResultCollector():
 
     def output_csv(self, output_dst='output.csv'):
         """csv形式にしてファイルに出力する"""
-        delete_if_exists(Path(output_dst))
         writer = CsvWriter(self._results)
         writer.write(output_dst)
 
@@ -764,10 +773,10 @@ class DetecterDrink(AnalyzerSuper):
         #     ,mpu    = 'model_images/drink_mpu.png')
         self._model_paths = dict()
         for ability in Abilities:
-            self._model_paths[ability.value] = f'model_images/drink_{ability.value}.png'
+            self._model_paths[ability] = f'model_images/drink_{ability.value}.png'
 
         # NO_ABILITIESは削除しておく
-        del self._model_paths[Abilities.NO_ABILITIES.value]
+        del self._model_paths[Abilities.NO_ABILITIES]
 
     def get_drinks(self):
         drinks = DrinkTickets()
@@ -993,10 +1002,3 @@ def highpass_filter(src, a = 0.1):
 
     # 実部の値のみを取り出し、符号なし整数型に変換して返す
     return  np.uint8(dst.real)
-
-###########
-##### Other
-###########
-def delete_if_exists(self, path: Path):
-    if path.exists() and path.is_file():
-        os.remove(str(path))
