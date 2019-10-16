@@ -176,6 +176,7 @@ class PathCollector():
         collector = ResultCollector()
         all_screenshots = len(self._path_collection)
         print(f'全部で{all_screenshots}枚の画像の解析を始めます。')
+        percent = 0
         while self._path_collection:
             # 一枚ずつopen → closeしないとファイルの開きすぎでエラーになる
             path = self._path_collection.pop()
@@ -185,7 +186,10 @@ class PathCollector():
                 collector.add(single_result)
 
             done_screenshots = all_screenshots - len(self._path_collection)
-            print(f'{int(done_screenshots / all_screenshots * 100)}%...')
+            progress = int(done_screenshots / all_screenshots * 100)
+            if progress > percent:
+                percent = progress
+                print(f'{percent}%...')
 
         return collector
 
@@ -810,7 +814,7 @@ class DetecterDrink(AnalyzerSuper):
     def _get(self, target):
         for power, path in self._model_paths.items():
             if is_similar(path, target):
-                return DrinkTickets(power, DrinkTicketPiece(0))
+                return DrinkTickets(power, DrinkTicketPiece(1))
 
         return None
 
@@ -904,6 +908,7 @@ def get_similarity(cropped_image, model, threshold_difference):
     gaussed_cropped = grayed_cropped.filter(filter=ImageFilter.GaussianBlur(radius=rad))
     gaussed_model = grayed_model.filter(filter=ImageFilter.GaussianBlur(radius=rad))
 
+    # テストで画像を確認したいときに実行するshowメソッド
     # gaussed_cropped.show()
     # gaussed_model.show()
 

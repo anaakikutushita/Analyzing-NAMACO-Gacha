@@ -768,3 +768,213 @@ class TestGachaAnalyzer(unittest.TestCase):
         abiliry = ValueObject.Abilities.ink_saver_main
         got_value = single_result._chunks._chunks[abiliry].count()
         self.assertEqual(got_value, 1)
+
+    def test_three_bbs(self):
+        image = Image.open('unit_tests/test_images/three_tickets/bdx_bdx_spu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.bomb_defence_up_dx
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.bomb_defence_up_dx
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.special_power_up
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_bbs(self):
+        image = Image.open('unit_tests/test_images/three_tickets/inkres_ss_qsj.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.ink_resistance_up
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability2 = ValueObject.Abilities.special_saver
+        got_value = single_result._drinks._tickets[ability2].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_iib(self):
+        image = Image.open('unit_tests/test_images/three_tickets/iss_iss_bpu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.ink_saver_sub
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.special_saver
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.sub_power_up
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_qqq(self):
+        image = Image.open('unit_tests/test_images/three_tickets/qr_qr_qsj.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.quick_respawn
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.special_saver
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_qiinkres(self):
+        image = Image.open('unit_tests/test_images/three_tickets/qsj_inkres_inkres.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.ink_resistance_up
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.special_saver
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_rqr(self):
+        image = Image.open('unit_tests/test_images/three_tickets/rsu_qsj_rsu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.run_speed_up
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.special_saver
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_sqs(self):
+        image = Image.open('unit_tests/test_images/three_tickets/scu_qsj_scu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.special_charge_up
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 2)
+
+        # single_resultの中身を確認する
+        # ability2 = ValueObject.Abilities.special_saver
+        # got_value = single_result._drinks._tickets[ability2].count()
+        # self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.quick_super_jump
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_sir(self):
+        image = Image.open('unit_tests/test_images/three_tickets/spu_iru_rsu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.special_power_up
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability2 = ValueObject.Abilities.ink_recovery_up
+        got_value = single_result._drinks._tickets[ability2].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.run_speed_up
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_sbi(self):
+        image = Image.open('unit_tests/test_images/three_tickets/ss_bdx_ism.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.special_saver
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability2 = ValueObject.Abilities.bomb_defence_up_dx
+        got_value = single_result._drinks._tickets[ability2].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.ink_saver_main
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
+
+    def test_three_ssm(self):
+        image = Image.open('unit_tests/test_images/three_tickets/ss_ssu_mpu.jpg')
+        screenshot = ValueObject.Screenshot(image)
+        analyzer = ValueObject.GachaAnalyzer(screenshot)
+        single_result = analyzer.get_result()
+
+        # single_resultの中身を確認する
+        ability1 = ValueObject.Abilities.special_saver
+        got_value = single_result._drinks._tickets[ability1].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability2 = ValueObject.Abilities.swim_speed_up
+        got_value = single_result._drinks._tickets[ability2].count()
+        self.assertEqual(got_value, 1)
+
+        # single_resultの中身を確認する
+        ability3 = ValueObject.Abilities.main_power_up
+        got_value = single_result._drinks._tickets[ability3].count()
+        self.assertEqual(got_value, 1)
