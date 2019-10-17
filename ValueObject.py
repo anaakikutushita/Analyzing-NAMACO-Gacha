@@ -20,36 +20,34 @@ class ScreenshotScale():
         self.width = 1280
         self.height = 720
 
-class HorizontalAxisCoordinate():
+class CoodinateOperator():
+    def __init__(self, value):
+        self._value = value
+
+    def __ge__(self, other):
+        return self._value >= other._value
+
+    def __sub__(self, other):
+        return self._value - other._value
+
+    def is_within_range(self, value, minimum_val, max_val):
+        return minimum_val <= value <= max_val
+
+class HorizontalAxisCoordinate(CoodinateOperator):
     def __init__(self, value):
         max_val = ScreenshotScale().width
         minimum_val = 0
-        if not is_within_range(value, minimum_val, max_val):
+        if not self.is_within_range(value, minimum_val, max_val):
             raise ValueError(f"{value}が範囲外")
-        self._value = value
+        super().__init__(value)
 
-    def __ge__(self, other):
-        return self._value >= other._value
-
-    def __sub__(self, other):
-        return self._value - other._value
-
-class VerticalAxisCoordinate():
+class VerticalAxisCoordinate(CoodinateOperator):
     def __init__(self, value):
         max_val = ScreenshotScale().height
         minimum_val = 0
-        if not is_within_range(value, minimum_val, max_val):
+        if not self.is_within_range(value, minimum_val, max_val):
             raise ValueError(f"{value}が範囲外")
-        self._value = value
-
-    def __ge__(self, other):
-        return self._value >= other._value
-
-    def __sub__(self, other):
-        return self._value - other._value
-
-def is_within_range(value, minimum_val, max_val):
-    return minimum_val <= value <= max_val
+        super().__init__(value)
 
 class ImageRegion():
     def __init__(self, left, right, top, bottom):
