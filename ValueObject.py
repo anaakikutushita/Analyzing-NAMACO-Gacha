@@ -65,6 +65,13 @@ class ImageRegion():
         self.top = top
         self.bottom = bottom
 
+    def get_Pillow_region(self):
+        # タプルで返す
+        return (self.left._value,
+                self.top._value,
+                self.right._value,
+                self.bottom._value)
+
 class Screenshot():
     def __init__(self, image: Image):
         # 型チェックしたかったけど、Imageオブジェクトの型を指定する方法がわからず断念
@@ -93,9 +100,7 @@ class Screenshot():
             raise ValueError(f"画像縦幅：{self._height}よりも大きな縦幅：{crop_height}でクロップしようとしている")
 
         # 本当はCoodinateクラスの._valueに触るべきではないが、うまいやり方が分からなかったのでこうした
-        cropped_image = self._image.crop((
-            region.left._value, region.top._value,
-            region.right._value, region.bottom._value))
+        cropped_image = self._image.crop(region.get_Pillow_region())
 
         # 新しいオブジェクトを作って返す
         new_screenshot = Screenshot(cropped_image)
