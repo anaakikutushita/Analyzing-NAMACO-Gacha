@@ -577,21 +577,21 @@ class GachaAnalyzer(AnalyzerSuper):
         """画像に何が写っているかに関係なく、おカネ・フード・ドリンク・かけらの解析を順番に行う。"""
         gacha_result = SingleResult(uuid4())
 
-        cash_result = DetecterCash(self._screenshot).get_cash()
+        cash_result = DetectorCash(self._screenshot).get_cash()
         gacha_result.gain_cash(cash_result)
 
-        food_result = DetecterFood(self._screenshot).get_foods()
+        food_result = DetectorFood(self._screenshot).get_foods()
         gacha_result.gain_food(food_result)
 
-        drink_result = DetecterDrink(self._screenshot).get_drinks()
+        drink_result = DetectorDrink(self._screenshot).get_drinks()
         gacha_result.gain_drink(drink_result)
 
-        chunk_result = DetecterChunk(self._screenshot).get_chunk()
+        chunk_result = DetectorChunk(self._screenshot).get_chunk()
         gacha_result.gain_chunk(chunk_result)
 
         return gacha_result
 
-class DetecterCash():
+class DetectorCash():
     def __init__(self, screenshot):
         # super().__init__(screenshot)
         if not isinstance(screenshot, Screenshot):
@@ -651,7 +651,7 @@ class DetecterCash():
         model_path = f'model_images/cash_{str(target_amount.value)}.png'
         return is_similar(model_path, crop, 10)
 
-class DetecterFood(AnalyzerSuper):
+class DetectorFood(AnalyzerSuper):
     def __init__(self, screenshot):
         super().__init__(screenshot)
 
@@ -698,7 +698,7 @@ class DetecterFood(AnalyzerSuper):
         model_path = f'model_images/food_{food_type.value}{str(multiplier.value)}.png'
         return is_similar(model_path, self._food_crop)
 
-class DetecterDrink(AnalyzerSuper):
+class DetectorDrink(AnalyzerSuper):
     def __init__(self, screenshot):
         super().__init__(screenshot)
 
@@ -785,7 +785,7 @@ class DetecterDrink(AnalyzerSuper):
 
         return None
 
-class DetecterChunk(AnalyzerSuper):
+class DetectorChunk(AnalyzerSuper):
     def __init__(self, screenshot):
         super().__init__(screenshot)
 
