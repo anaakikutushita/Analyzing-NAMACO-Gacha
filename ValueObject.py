@@ -8,8 +8,6 @@ import csv
 import math
 import operator
 from functools import reduce
-import cv2
-import numpy as np
 from PIL import ImageChops
 from PIL import Image
 from PIL import ImageFilter
@@ -111,29 +109,6 @@ class Screenshot():
         self._width = image.size[0]
         self._height = image.size[1]
 
-class ScreenshotCollector():
-    def __init__(self):
-        self._screenshots = set()
-
-    def add(self, screenshot):
-        if not isinstance(screenshot, Screenshot):
-            raise TypeError('スクリーンショットの型が不正')
-
-        self._screenshots.add(screenshot)
-
-    def count(self):
-        return len(self._screenshots)
-
-    def get_result_collection(self):
-        collector = ResultCollector()
-
-        while self._screenshots:
-            target = self._screenshots.pop()
-            gacha_result = GachaAnalyzer(target).get_result()
-            collector.add(gacha_result)
-
-        return collector
-
 ########################################################
 ##### File Definition
 ########################################################
@@ -159,15 +134,6 @@ class PathCollector():
             raise ValueError(f'ディレクトリ{target_directory}がファイルを指している')
 
         self._path_collection = set(target_directory.glob(extension.value))
-
-    def get_screenshots(self):
-        """ScreenshotCollectorを返す"""
-        collector = ScreenshotCollector()
-        for image_path in self._path_collection:
-            screenshot = Screenshot(Image.open(str(image_path)))
-            collector.add(screenshot)
-
-        return collector
 
     def analyze_each(self):
         """
@@ -869,38 +835,8 @@ class DetecterChunk(AnalyzerSuper):
 ########################################################
 ##### Image Amalysis Core
 ########################################################
-def get_hist(image):
-    """
-    cv2.compareHistに渡すと画像の類似度を計算できるヒストグラムオブジェクトを取得する。
-    """
-    #BGR三色を考慮したヒストグラムのベクトルを取得する。
-    if not isinstance(image, np.ndarray):
-        raise TypeError("ヒストグラム計算時に使うオブジェクトがndarrayでない")
-
-    #binsはヒストグラム解析の解像度を示す指標。最も詳細に解析する場合は256でよい
-    all_bins = [256]
-    #rangeはヒストグラム解析の対象となる画素領域。最も詳細に解析する場合は[0,256]でよい
-    all_ranges = [0, 256]
-
-    mask = None
-
-    hist_bgr = []
-    #channelは0,1,2がそれぞれB,G,Rに相当。グレースケールの場合は0
-    for channel in range(3):
-        hist = cv2.calcHist([image], [channel], mask, all_bins, all_ranges)
-        hist_bgr.append(hist)
-
-    hist_array = np.array(hist_bgr)
-
-    # hist_vecの計算方法はよくわからない。参考記事を写しただけ https://ensekitt.hatenablog.com/entry/2018/07/09/200000
-    hist_vec = hist_array.reshape(hist_array.shape[0]*hist_array.shape[1], 1)
-    return hist_vec
-
 def get_similarity(cropped_image, model, threshold_difference):
-    ############################
-    # 二乗平均平方根を使う方法 #
-    ############################
-    # https://stackoverflow.com/questions/11816203/python-code-to-compare-images-in-python
+    # グレースケール化してから画像をガウスぼかしして、ピクセルごとの二乗平均平方根を使う
     grayed_cropped = cropped_image.convert('L')
     grayed_model = model.convert('L')
 
@@ -920,90 +856,14 @@ def get_similarity(cropped_image, model, threshold_difference):
                                       range(256))) / (float(gaussed_model.size[0]) * gaussed_cropped.size[1]))
 
     is_same_image = difference < threshold_difference
-
-    ##############################
-    # ハイパスフィルタを使う方法 #
-    ##############################
-    # image1_filtered = highpass_filter(image1)
-    # image2_filtered = highpass_filter(model)
-
-    # cv2.imshow('filtered1', image1_filtered)
-    # cv2.imshow('filtered2', image2_filtered)
-    # cv2.waitKey(0)
-
-    ########################
-    # 色の引き算を使う方法 #
-    ########################
-    # difference = cv2.subtract(image1_filtered, image2_filtered)
-
-    # # b,g,rからちょっとだけ引き算した結果が0ならオッケー、って感じにするとよさげ
-    # # 引き算のやり方は知らん
-
-    # zero_count = cv2.countNonZero(difference)
-    # is_same_image = difference.max() < threshold_difference
-
-    # if not is_same_image:
-    #     cv2.imshow('image1', image1_filtered)
-    #     cv2.imshow('image2', image2_filtered)
-    #     cv2.waitKey(30)
-
-    # cv2.imshow('image1', image1)
-    # cv2.imshow('image2', image2)
-
-    # cv2.waitKey(0)
-
-    ##############################
-    # ヒストグラム比較を使う方法 #
-    ##############################
-    # hist1 = get_hist(image1)
-    # hist2 = get_hist(image2)
-    # compare_method = 0 #ようわからんけど0にしとくといいみたい
-    # return cv2.compareHist(hist1, hist2, compare_method)
-
     return is_same_image
 
 def is_similar(path_str, screenshot, threshold_difference=8):
+    """
+    存在しなくてもいいメソッドなんだけど、リファクタリングが面倒なので作った
+    """
     # threshold_differenceの値は実際の画像でテストしつつ調整したもの。計算で出したい……
     model = Image.open(path_str)
     whole_image = screenshot._image
     is_similar = get_similarity(whole_image, model, threshold_difference)
     return is_similar
-
-def highpass_filter(src, a = 0.1):
-    # グレースケール化
-    src = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
-
-    # 高速フーリエ変換(2次元)
-    src = np.fft.fft2(src)
-
-    # 画像サイズ
-    h, w = src.shape
-
-    # 画像の中心座標
-    cy, cx =  int(h/2), int(w/2)
-
-    # フィルタのサイズ(矩形の高さと幅)
-    rh, rw = int(a*cy), int(a*cx)
-
-    # 第1象限と第3象限、第1象限と第4象限を入れ替え
-    fsrc =  np.fft.fftshift(src)  
-
-    # 入力画像と同じサイズで値0の配列を生成
-    fdst = fsrc.copy()
-
-    # 中心部分だけ0を代入（中心部分以外は元のまま）
-    # fdst[cy-rh:cy+rh, cx-rw:cx+rw] = 0
-
-    # ローパスの場合：中心部分だけ1
-    mask = np.zeros((h, w), np.uint8)
-    mask[cy-rh:cy+rh, cx-rw:cx+rw] = 1
-    fdst = fdst * mask
-
-    # 第1象限と第3象限、第1象限と第4象限を入れ替え(元に戻す)
-    fdst =  np.fft.fftshift(fdst)
-
-    # 高速逆フーリエ変換
-    dst = np.fft.ifft2(fdst)
-
-    # 実部の値のみを取り出し、符号なし整数型に変換して返す
-    return  np.uint8(dst.real)

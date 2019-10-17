@@ -99,26 +99,7 @@ class TestScreenshot(unittest.TestCase):
         self.assertEqual(cropped._width, width)
         self.assertEqual(cropped._height, height)
 
-class TestScreenshotCollector(unittest.TestCase):
-    def test_invalid_add(self):
-        collocter = ValueObject.ScreenshotCollector()
-        try:
-            collocter.add('dummy')
-        except:
-            self.assertRaises(TypeError)
-
-    def test_add(self):
-        image = Image.open('unit_tests/test_images/sample_image.jpg')
-
-        screenshot = ValueObject.Screenshot(image)
-        screenshot2 = ValueObject.Screenshot(image)
-
-        collector = ValueObject.ScreenshotCollector()
-        collector.add(screenshot)
-        collector.add(screenshot2)
-
-        self.assertEqual(collector.count(), 2)
-
+class TestResultCollection(unittest.TestCase):
     def test_get_result_collection(self):
         input_dir = Path('unit_tests/test_images/result_collector_test')
         input_paths = ValueObject.PathCollector(input_dir)
@@ -175,13 +156,6 @@ class TestPathCollector(unittest.TestCase):
             ValueObject.PathCollector(Path('./input_screenshots/'), invalid_ext)
         except:
             self.assertRaises(TypeError)
-
-    def test_get_screenshots(self):
-        input_directory = Path('./unit_tests/test_images/three_images_test/')
-        path_collector = ValueObject.PathCollector(input_directory)
-        screenshot_collector = path_collector.get_screenshots()
-
-        self.assertEqual(screenshot_collector.count(), 3)
 
 class TestCash(unittest.TestCase):
     def test_invalid_amount(self):
@@ -476,18 +450,13 @@ class TestResultCollector(unittest.TestCase):
 
         input_dir = Path('unit_tests/test_images/result_collector_test')
         input_paths = ValueObject.PathCollector(input_dir)
-        input_screenshots = input_paths.get_screenshots()
-        gacha_results = input_screenshots.get_result_collection()
+        gacha_results = input_paths.analyze_each()
         gacha_results.output_csv(output_dst=output_dst)
 
-        # 出力されたCSVの中身を確認する。
-        # ヘッダについては別のテストがあるが、
-        # ファイルとして生成されたものはテストしていないので、本テストでヘッダもテストする
-
-        # CSVが生成されているか
+        # CSVが生成されているかを確認
+        # 読み込んで中を確認しようと思ったけど力尽きた。ファイル生成だけ確認すればいいやってことにした。
         self.assertTrue(output_dst.exists())
 
-        # 読み込んで中を確認しようと思ったけど力尽きた。ファイル生成だけ確認すればいいやってことにした。
 
     def _delete_if_exists(self, path: Path):
         if path.exists() and path.is_file():
