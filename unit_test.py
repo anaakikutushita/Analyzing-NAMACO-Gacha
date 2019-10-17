@@ -18,14 +18,14 @@ class TestScreenshotScale(unittest.TestCase):
 class TestHorizontalAxisCoordinate(unittest.TestCase):
     def test_outrange(self):
         try:
-            ValueObject.HorizontalAxisCoordinate(2000)
+            ValueObject.HorizontalAxis(2000)
         except:
             self.assertRaises(ValueError)
 
 class TestVerticalAxisCoordinate(unittest.TestCase):
     def test_outrange(self):
         try:
-            ValueObject.VerticalAxisCoordinate(2000)
+            ValueObject.VerticalAxis(2000)
         except:
             self.assertRaises(ValueError)
 
@@ -70,16 +70,16 @@ class TestScreenshot(unittest.TestCase):
         image = Image.open('unit_tests/test_images/sample_image.jpg')
         screenshot = ValueObject.Screenshot(image)
         region = ValueObject.ImageRegion(
-            ValueObject.HorizontalAxisCoordinate(0),
-            ValueObject.HorizontalAxisCoordinate(100),
-            ValueObject.VerticalAxisCoordinate(0),
-            ValueObject.VerticalAxisCoordinate(200))
+            ValueObject.HorizontalAxis(0),
+            ValueObject.HorizontalAxis(100),
+            ValueObject.VerticalAxis(0),
+            ValueObject.VerticalAxis(200))
         small_screenshot = screenshot.crop(region)
         new_region = ValueObject.ImageRegion(
-            ValueObject.HorizontalAxisCoordinate(0),
-            ValueObject.HorizontalAxisCoordinate(200),
-            ValueObject.VerticalAxisCoordinate(0),
-            ValueObject.VerticalAxisCoordinate(300))
+            ValueObject.HorizontalAxis(0),
+            ValueObject.HorizontalAxis(200),
+            ValueObject.VerticalAxis(0),
+            ValueObject.VerticalAxis(300))
         try:
             small_screenshot.crop(new_region)
         except:
@@ -91,10 +91,10 @@ class TestScreenshot(unittest.TestCase):
         width = 200
         height = 300
         region = ValueObject.ImageRegion(
-            ValueObject.HorizontalAxisCoordinate(0),
-            ValueObject.HorizontalAxisCoordinate(width),
-            ValueObject.VerticalAxisCoordinate(0),
-            ValueObject.VerticalAxisCoordinate(height))
+            ValueObject.HorizontalAxis(0),
+            ValueObject.HorizontalAxis(width),
+            ValueObject.VerticalAxis(0),
+            ValueObject.VerticalAxis(height))
         cropped = screenshot.crop(region)
         self.assertEqual(cropped._width, width)
         self.assertEqual(cropped._height, height)

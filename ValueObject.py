@@ -20,7 +20,7 @@ class ScreenshotScale():
         self.width = 1280
         self.height = 720
 
-class CoodinateOperator():
+class Coodinate():
     def __init__(self, value):
         self._value = value
 
@@ -33,7 +33,7 @@ class CoodinateOperator():
     def is_within_range(self, value, minimum_val, max_val):
         return minimum_val <= value <= max_val
 
-class HorizontalAxisCoordinate(CoodinateOperator):
+class HorizontalAxis(Coodinate):
     def __init__(self, value):
         max_val = ScreenshotScale().width
         minimum_val = 0
@@ -41,7 +41,7 @@ class HorizontalAxisCoordinate(CoodinateOperator):
             raise ValueError(f"{value}が範囲外")
         super().__init__(value)
 
-class VerticalAxisCoordinate(CoodinateOperator):
+class VerticalAxis(Coodinate):
     def __init__(self, value):
         max_val = ScreenshotScale().height
         minimum_val = 0
@@ -51,10 +51,10 @@ class VerticalAxisCoordinate(CoodinateOperator):
 
 class ImageRegion():
     def __init__(self, left, right, top, bottom):
-        if not (isinstance(left, HorizontalAxisCoordinate) and
-                isinstance(right, HorizontalAxisCoordinate) and
-                isinstance(top, VerticalAxisCoordinate) and
-                isinstance(bottom, VerticalAxisCoordinate)):
+        if not (isinstance(left, HorizontalAxis) and
+                isinstance(right, HorizontalAxis) and
+                isinstance(top, VerticalAxis) and
+                isinstance(bottom, VerticalAxis)):
             raise TypeError("AxixCoordinateを使っていない")
 
         if left >= right or top >= bottom:
@@ -78,16 +78,21 @@ class Screenshot():
         # if not isinstance(image, Image):
         #     raise TypeError("Screenshot型に渡したものがImageでない")
 
-        self._set_attribute(image)
+        self._image = image
+        self._width = image.size[0]
+        self._height = image.size[1]
 
-        if self._height > ScreenshotScale().height:
-            raise ValueError(f"画像の縦：{self._image.size[0]}が規定より大きい")
         if self._width > ScreenshotScale().width:
-            raise ValueError(f"画像の横：{self._image.size[1]}が規定より大きい")
+            raise ValueError(f"画像の横：{self._width}が規定より大きい")
+        if self._height > ScreenshotScale().height:
+            raise ValueError(f"画像の縦：{self._height}が規定より大きい")
 
         self._image = image
 
     def crop(self, region):
+        """
+        クロップされたImageを持つ新たなScreenshotインスタンスを作成して返す
+        """
         if not isinstance(region, ImageRegion):
             raise TypeError("クロップ指定領域がImageRegion型でない")
 
@@ -99,18 +104,9 @@ class Screenshot():
         if crop_height > self._height:
             raise ValueError(f"画像縦幅：{self._height}よりも大きな縦幅：{crop_height}でクロップしようとしている")
 
-        # 本当はCoodinateクラスの._valueに触るべきではないが、うまいやり方が分からなかったのでこうした
         cropped_image = self._image.crop(region.get_Pillow_region())
-
-        # 新しいオブジェクトを作って返す
         new_screenshot = Screenshot(cropped_image)
         return new_screenshot
-
-    def _set_attribute(self, image):
-        self._image = image
-
-        self._width = image.size[0]
-        self._height = image.size[1]
 
 ########################################################
 ##### File Definition
@@ -143,17 +139,19 @@ class PathCollector():
         取得した画像のパスからリザルトを取得してまとめて返す
         """
         collector = ResultCollector()
+        # 開始の旨をコンソールに出力
         all_screenshots = len(self._path_collection)
         print(f'全部で{all_screenshots}枚の画像の解析を始めます。')
         percent = 0
         while self._path_collection:
-            # 一枚ずつopen → closeしないとファイルの開きすぎでエラーになる
+            # 一枚ずつopen→closeしないとファイルの開きすぎでエラーになるため、withを使ってその都度閉じる
             path = self._path_collection.pop()
             with Image.open(path) as image:
                 screenshot = Screenshot(image)
                 single_result = GachaAnalyzer(screenshot).get_result()
                 collector.add(single_result)
 
+            # 現在の進捗をコンソールに出力
             done_screenshots = all_screenshots - len(self._path_collection)
             progress = int(done_screenshots / all_screenshots * 100)
             if progress > percent:
@@ -601,16 +599,16 @@ class DetecterCash():
         self._screenshot = screenshot
 
         # ↓金額特定に使う変数
-        digits4_region = ImageRegion(HorizontalAxisCoordinate(520),
-                                     HorizontalAxisCoordinate(615),
-                                     VerticalAxisCoordinate(194),
-                                     VerticalAxisCoordinate(226))
+        digits4_region = ImageRegion(HorizontalAxis(520),
+                                     HorizontalAxis(615),
+                                     VerticalAxis(194),
+                                     VerticalAxis(226))
         self._digits4_crop = self._screenshot.crop(digits4_region)
 
-        digits5_region = ImageRegion(HorizontalAxisCoordinate(507),
-                                     HorizontalAxisCoordinate(627),
-                                     VerticalAxisCoordinate(194),
-                                     VerticalAxisCoordinate(226))
+        digits5_region = ImageRegion(HorizontalAxis(507),
+                                     HorizontalAxis(627),
+                                     VerticalAxis(194),
+                                     VerticalAxis(226))
         self._digits5_crop = self._screenshot.crop(digits5_region)
 
     def get_cash(self):
@@ -628,10 +626,10 @@ class DetecterCash():
 
     def _has_any_cash(self, screenshot):
         """ガチャ結果のスクショがおカネを入手したものかどうか判定する"""
-        cash_icon_region = ImageRegion(HorizontalAxisCoordinate(597),
-                                       HorizontalAxisCoordinate(678),
-                                       VerticalAxisCoordinate(287),
-                                       VerticalAxisCoordinate(370))
+        cash_icon_region = ImageRegion(HorizontalAxis(597),
+                                       HorizontalAxis(678),
+                                       VerticalAxis(287),
+                                       VerticalAxis(370))
         center_crop = screenshot.crop(cash_icon_region)
 
         # スクショの中央部分の切り抜きと、予め取得しているおカネアイコンの画像が似ていれば、
@@ -657,10 +655,10 @@ class DetecterFood(AnalyzerSuper):
     def __init__(self, screenshot):
         super().__init__(screenshot)
 
-        food_region = ImageRegion(HorizontalAxisCoordinate(581),
-                                  HorizontalAxisCoordinate(656),
-                                  VerticalAxisCoordinate(302),
-                                  VerticalAxisCoordinate(367))
+        food_region = ImageRegion(HorizontalAxis(581),
+                                  HorizontalAxis(656),
+                                  VerticalAxis(302),
+                                  VerticalAxis(367))
         self._food_crop = self._screenshot.crop(food_region)
 
     def get_foods(self):
@@ -705,28 +703,28 @@ class DetecterDrink(AnalyzerSuper):
         super().__init__(screenshot)
 
         # ドリンクチケットは「1枚だけ出る」「3つ横並びに出る」「14枚一気に出る」という３パターンがあるので、調べるregionも多数定義する
-        center_region = ImageRegion(HorizontalAxisCoordinate(581),
-                                    HorizontalAxisCoordinate(656),
-                                    VerticalAxisCoordinate(302),
-                                    VerticalAxisCoordinate(367))
+        center_region = ImageRegion(HorizontalAxis(581),
+                                    HorizontalAxis(656),
+                                    VerticalAxis(302),
+                                    VerticalAxis(367))
         self._center_crop = self._screenshot.crop(center_region)
 
-        left_region = ImageRegion(HorizontalAxisCoordinate(460),
-                                  HorizontalAxisCoordinate(535),
-                                  VerticalAxisCoordinate(288),
-                                  VerticalAxisCoordinate(353))
+        left_region = ImageRegion(HorizontalAxis(460),
+                                  HorizontalAxis(535),
+                                  VerticalAxis(288),
+                                  VerticalAxis(353))
         self._left_crop = self._screenshot.crop(left_region)
 
-        right_region = ImageRegion(HorizontalAxisCoordinate(702),
-                                   HorizontalAxisCoordinate(777),
-                                   VerticalAxisCoordinate(315),
-                                   VerticalAxisCoordinate(380))
+        right_region = ImageRegion(HorizontalAxis(702),
+                                   HorizontalAxis(777),
+                                   VerticalAxis(315),
+                                   VerticalAxis(380))
         self._right_crop = self._screenshot.crop(right_region)
 
-        fourteen_region = ImageRegion(HorizontalAxisCoordinate(389),
-                                      HorizontalAxisCoordinate(888),
-                                      VerticalAxisCoordinate(270),
-                                      VerticalAxisCoordinate(389))
+        fourteen_region = ImageRegion(HorizontalAxis(389),
+                                      HorizontalAxis(888),
+                                      VerticalAxis(270),
+                                      VerticalAxis(389))
         self._fourteen_crop = self._screenshot.crop(fourteen_region)
 
         # self._model_paths = dict(
@@ -792,16 +790,16 @@ class DetecterChunk(AnalyzerSuper):
         super().__init__(screenshot)
 
         # 中央のかけらアイコンのクロップと、かけらの個数部分のクロップを保持する
-        icon_region = ImageRegion(HorizontalAxisCoordinate(590),
-                                  HorizontalAxisCoordinate(685),
-                                  VerticalAxisCoordinate(284),
-                                  VerticalAxisCoordinate(378))
+        icon_region = ImageRegion(HorizontalAxis(590),
+                                  HorizontalAxis(685),
+                                  VerticalAxis(284),
+                                  VerticalAxis(378))
         self._icon_crop = self._screenshot.crop(icon_region)
 
-        pieces_region = ImageRegion(HorizontalAxisCoordinate(725),
-                                    HorizontalAxisCoordinate(771),
-                                    VerticalAxisCoordinate(340),
-                                    VerticalAxisCoordinate(368))
+        pieces_region = ImageRegion(HorizontalAxis(725),
+                                    HorizontalAxis(771),
+                                    VerticalAxis(340),
+                                    VerticalAxis(368))
         self._pieces_crop = self._screenshot.crop(pieces_region)
 
         self._chunk_model_paths = dict()
@@ -838,7 +836,7 @@ class DetecterChunk(AnalyzerSuper):
 ########################################################
 ##### Image Amalysis Core
 ########################################################
-def get_similarity(cropped_image, model, threshold_difference):
+def is_same_image(cropped_image, model, threshold_difference):
     # グレースケール化してから画像をガウスぼかしして、ピクセルごとの二乗平均平方根を使う
     grayed_cropped = cropped_image.convert('L')
     grayed_model = model.convert('L')
@@ -852,6 +850,7 @@ def get_similarity(cropped_image, model, threshold_difference):
     # gaussed_model.show()
 
     hist = ImageChops.difference(gaussed_cropped, gaussed_model).histogram()
+    # 計算式はググって出てきたものをコピペしただけで、意味はよくわからない
     difference = math.sqrt(reduce(operator.add,
                                   map(lambda hist,
                                       i: hist*(i**2),
@@ -868,5 +867,5 @@ def is_similar(path_str, screenshot, threshold_difference=8):
     # threshold_differenceの値は実際の画像でテストしつつ調整したもの。計算で出したい……
     model = Image.open(path_str)
     whole_image = screenshot._image
-    is_similar = get_similarity(whole_image, model, threshold_difference)
+    is_similar = is_same_image(whole_image, model, threshold_difference)
     return is_similar
